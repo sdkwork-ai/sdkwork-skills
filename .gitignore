@@ -72,3 +72,9 @@ node_modules.stale.*/
 
 # Build artifacts
 /bin/
+sdks/**/*.js
+sdks/**/*.d.ts
+sdks/**/*.js.map
+sdks/**/*.d.ts.map
+
+# Local build artifacts / workspace junk (auto-sync)
