@@ -1,0 +1,27 @@
+[package]
+name = "sdkwork-api-skills-standalone-gateway"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lib]
+path = "src/lib.rs"
+
+[[bin]]
+name = "sdkwork-api-skills-standalone-gateway"
+path = "src/bin/app_main.rs"
+
+[dependencies]
+sdkwork-api-skills-assembly.workspace = true
+sdkwork-database-sqlx.workspace = true
+sdkwork-iam-web-adapter.workspace = true
+sdkwork-web-bootstrap.workspace = true
+sdkwork-web-core.workspace = true
+axum.workspace = true
+tokio = { workspace = true, features = ["net", "signal"] }
+tracing.workspace = true
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+[dev-dependencies]
+serde_json.workspace = true
+tower = { version = "0.5", features = ["util"] }

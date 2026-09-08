@@ -1,0 +1,76 @@
+{
+  "name": "sdkwork-skills-pc",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "packageManager": "pnpm@10.33.0",
+  "scripts": {
+    "dev": "node ../../../sdkwork-iam/scripts/dev/run-pc-renderer-dev-with-bootstrap.mjs -- vite",
+    "build": "vite build",
+    "test": "node --test tests/*.test.mjs",
+    "typecheck": "tsc --noEmit",
+    "build:dev": "node ../../../sdkwork-specs/tools/build-browser-client.mjs --app-root . --environment dev",
+    "build:test": "node ../../../sdkwork-specs/tools/build-browser-client.mjs --app-root . --environment test",
+    "build:staging": "node ../../../sdkwork-specs/tools/build-browser-client.mjs --app-root . --environment staging",
+    "build:demo": "node ../../../sdkwork-specs/tools/build-browser-client.mjs --app-root . --environment demo",
+    "build:prod": "node ../../../sdkwork-specs/tools/build-browser-client.mjs --app-root . --environment prod",
+    "build:dev:cloud": "node ../../../sdkwork-specs/tools/build-browser-client.mjs --app-root . --environment dev --deployment-profile cloud",
+    "build:test:cloud": "node ../../../sdkwork-specs/tools/build-browser-client.mjs --app-root . --environment test --deployment-profile cloud",
+    "build:staging:cloud": "node ../../../sdkwork-specs/tools/build-browser-client.mjs --app-root . --environment staging --deployment-profile cloud",
+    "build:demo:cloud": "node ../../../sdkwork-specs/tools/build-browser-client.mjs --app-root . --environment demo --deployment-profile cloud",
+    "build:prod:cloud": "node ../../../sdkwork-specs/tools/build-browser-client.mjs --app-root . --environment prod --deployment-profile cloud"
+  },
+  "dependencies": {
+    "@sdkwork/iam-app-sdk": "workspace:*",
+    "@sdkwork/auth-pc-react": "workspace:*",
+    "@sdkwork/auth-runtime-pc-react": "workspace:*",
+    "@sdkwork/drive-app-sdk": "workspace:*",
+    "@sdkwork/iam-contracts": "workspace:*",
+    "@sdkwork/iam-runtime": "workspace:*",
+    "@sdkwork/runtime-bootstrap": "workspace:*",
+    "@sdkwork/skills-pc-admin": "workspace:*",
+    "@sdkwork/skills-pc-admin-core": "workspace:*",
+    "@sdkwork/skills-pc-commons": "workspace:*",
+    "@sdkwork/skills-pc-console": "workspace:*",
+    "@sdkwork/skills-pc-core": "workspace:*",
+    "@sdkwork/skills-pc-hub": "workspace:*",
+    "@sdkwork/skills-pc-shell": "workspace:*",
+    "@sdkwork/sdk-common": "workspace:*",
+    "@sdkwork/utils": "workspace:*",
+    "@tailwindcss/vite": "^4.1.14",
+    "i18next": "catalog:",
+    "lucide-react": "catalog:",
+    "qrcode": "catalog:",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "react-i18next": "catalog:",
+    "react-router-dom": "^7.6.0",
+    "@sdkwork/skills-app-sdk": "workspace:*",
+    "@sdkwork/skills-backend-sdk": "workspace:*",
+    "tailwind-merge": "^3.5.0",
+    "tailwindcss": "^4.1.14",
+    "@sdkwork/skills-pc-console-skills": "workspace:*",
+    "@sdkwork/skills-pc-admin-skill": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/react": "^19.1.0",
+    "@types/react-dom": "^19.1.0",
+    "@vitejs/plugin-react": "^4.4.1",
+    "typescript": "^5.9.0",
+    "vite": "^6.3.0"
+  },
+  "sdkwork": {
+    "workspace": "sdkwork-skills",
+    "architecture": "pc-react",
+    "domain": "intelligence",
+    "capability": "skills",
+    "status": "ready"
+  },
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "import": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  }
+}

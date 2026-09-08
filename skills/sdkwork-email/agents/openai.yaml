@@ -1,0 +1,3 @@
+interface:
+  short_description: "Skills platform email via SDKWork services, not local scripts."
+  default_prompt: "Skills does not host email transport. Use the owning SDKWork platform email capability through approved SDK families when notifications are required."

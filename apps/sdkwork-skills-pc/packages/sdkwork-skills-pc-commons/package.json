@@ -1,0 +1,19 @@
+{
+  "name": "@sdkwork/skills-pc-commons",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "import": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./runtime": "./src/runtime.ts",
+    "./driveUri": "./src/driveUri.ts"
+  },
+  "dependencies": {
+    "@sdkwork/sdk-common": "workspace:*",
+    "@sdkwork/utils": "workspace:*"
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "name": "@sdkwork/skills-pc-admin",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "main": "./src/index.tsx",
+  "types": "src/index.tsx",
+  "exports": {
+    ".": {
+      "types": "./src/index.tsx",
+      "import": "./src/index.tsx",
+      "default": "./src/index.tsx"
+    }
+  },
+  "dependencies": {
+    "@sdkwork/drive-app-sdk": "workspace:*",
+    "@sdkwork/skills-pc-admin-core": "workspace:*",
+    "@sdkwork/skills-pc-commons": "workspace:*",
+    "@sdkwork/skills-pc-core": "workspace:*",
+    "@sdkwork/utils": "workspace:*",
+    "react": "^19.1.0"
+  }
+}

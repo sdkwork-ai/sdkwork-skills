@@ -1,0 +1,422 @@
+{
+  "schemaVersion": 5,
+  "kind": "sdkwork.app.topology",
+  "appId": "sdkwork-skills",
+  "applicationCode": "skills",
+  "archetype": "application-http-gateway",
+  "profileRoot": "etc/topology",
+  "profilePattern": "{deploymentProfile}.{environment}.env",
+  "vocabulary": {
+    "deploymentProfile": {
+      "allowed": [
+        "standalone",
+        "cloud"
+      ]
+    },
+    "environment": {
+      "allowed": [
+        "development",
+        "test",
+        "staging",
+        "production",
+        "demo"
+      ]
+    }
+  },
+  "defaults": {
+    "developmentProfileId": "standalone.development",
+    "productionProfileId": "cloud.production",
+    "desktopBuildProfileId": "standalone.production",
+    "gatewayBind": "127.0.0.1:8080"
+  },
+  "profileFiles": {
+    "standalone.development": "etc/topology/standalone.development.env",
+    "standalone.test": "etc/topology/standalone.test.env",
+    "standalone.staging": "etc/topology/standalone.staging.env",
+    "standalone.production": "etc/topology/standalone.production.env",
+    "standalone.demo": "etc/topology/standalone.demo.env",
+    "cloud.development": "etc/topology/cloud.development.env",
+    "cloud.test": "etc/topology/cloud.test.env",
+    "cloud.staging": "etc/topology/cloud.staging.env",
+    "cloud.production": "etc/topology/cloud.production.env",
+    "cloud.demo": "etc/topology/cloud.demo.env"
+  },
+  "envKeys": {
+    "deploymentProfile": "SDKWORK_SKILLS_DEPLOYMENT_PROFILE",
+    "environment": "SDKWORK_SKILLS_ENVIRONMENT",
+    "profileId": "SDKWORK_SKILLS_PROFILE_ID",
+    "clientDeploymentProfile": "VITE_SDKWORK_SKILLS_DEPLOYMENT_PROFILE",
+    "standaloneGatewayBind": "SDKWORK_SKILLS_APPLICATION_PUBLIC_INGRESS_BIND",
+    "clientApiGatewayBaseUrl": "VITE_SDKWORK_SKILLS_PLATFORM_API_GATEWAY_HTTP_URL",
+    "apiGatewayBaseUrl": "SDKWORK_SKILLS_PLATFORM_API_GATEWAY_HTTP_URL"
+  },
+  "surfaces": {
+    "application.public-ingress": {
+      "connectivityPlane": "application",
+      "protocols": [
+        "http"
+      ],
+      "bindEnv": "SDKWORK_SKILLS_APPLICATION_PUBLIC_INGRESS_BIND",
+      "httpUrlEnv": "SDKWORK_SKILLS_APPLICATION_PUBLIC_HTTP_URL",
+      "clientHttpEnv": "VITE_SDKWORK_SKILLS_APPLICATION_PUBLIC_HTTP_URL"
+    },
+    "platform.api-gateway": {
+      "connectivityPlane": "platform",
+      "protocols": [
+        "http"
+      ],
+      "httpUrlEnv": "SDKWORK_SKILLS_PLATFORM_API_GATEWAY_HTTP_URL",
+      "clientHttpEnv": "VITE_SDKWORK_SKILLS_PLATFORM_API_GATEWAY_HTTP_URL"
+    }
+  },
+  "cloudPublicHosts": {
+    "application.public-ingress": {
+      "httpHost": "skills.sdkwork.com",
+      "environments": {
+        "development": {
+          "httpHosts": [
+            "skills-dev.sdkwork.com",
+            "skills-dev.birdcoder.com",
+            "skills-dev.dtupay.com",
+            "skills-dev.noaper.com",
+            "skills-dev.sdkwork.cn",
+            "skills-dev.birdcoder.cn",
+            "skills-dev.dtupay.cn",
+            "skills-dev.noaper.cn",
+            "skills-dev.skubc.com",
+            "skills-dev.skubc.cn",
+            "skills-dev.zowalk.com",
+            "skills-dev.zowalk.cn",
+            "skills-dev.offer86.com",
+            "skills-dev.offer86.cn",
+            "skills-dev.86offer.com",
+            "skills-dev.86offer.cn"
+          ]
+        },
+        "test": {
+          "httpHosts": [
+            "skills-test.sdkwork.com",
+            "skills-test.birdcoder.com",
+            "skills-test.dtupay.com",
+            "skills-test.noaper.com",
+            "skills-test.sdkwork.cn",
+            "skills-test.birdcoder.cn",
+            "skills-test.dtupay.cn",
+            "skills-test.noaper.cn",
+            "skills-test.skubc.com",
+            "skills-test.skubc.cn",
+            "skills-test.zowalk.com",
+            "skills-test.zowalk.cn",
+            "skills-test.offer86.com",
+            "skills-test.offer86.cn",
+            "skills-test.86offer.com",
+            "skills-test.86offer.cn"
+          ]
+        },
+        "staging": {
+          "httpHosts": [
+            "skills-staging.sdkwork.com",
+            "skills-staging.birdcoder.com",
+            "skills-staging.dtupay.com",
+            "skills-staging.noaper.com",
+            "skills-staging.sdkwork.cn",
+            "skills-staging.birdcoder.cn",
+            "skills-staging.dtupay.cn",
+            "skills-staging.noaper.cn",
+            "skills-staging.skubc.com",
+            "skills-staging.skubc.cn",
+            "skills-staging.zowalk.com",
+            "skills-staging.zowalk.cn",
+            "skills-staging.offer86.com",
+            "skills-staging.offer86.cn",
+            "skills-staging.86offer.com",
+            "skills-staging.86offer.cn"
+          ]
+        },
+        "demo": {
+          "httpHosts": [
+            "skills-demo.sdkwork.com",
+            "skills-demo.birdcoder.com",
+            "skills-demo.dtupay.com",
+            "skills-demo.noaper.com",
+            "skills-demo.sdkwork.cn",
+            "skills-demo.birdcoder.cn",
+            "skills-demo.dtupay.cn",
+            "skills-demo.noaper.cn",
+            "skills-demo.skubc.com",
+            "skills-demo.skubc.cn",
+            "skills-demo.zowalk.com",
+            "skills-demo.zowalk.cn",
+            "skills-demo.offer86.com",
+            "skills-demo.offer86.cn",
+            "skills-demo.86offer.com",
+            "skills-demo.86offer.cn"
+          ]
+        }
+      },
+      "httpHosts": [
+        "skills.sdkwork.com",
+        "skills.birdcoder.com",
+        "skills.dtupay.com",
+        "skills.noaper.com",
+        "skills.sdkwork.cn",
+        "skills.birdcoder.cn",
+        "skills.dtupay.cn",
+        "skills.noaper.cn",
+        "skills.skubc.com",
+        "skills.skubc.cn",
+        "skills.zowalk.com",
+        "skills.zowalk.cn",
+        "skills.offer86.com",
+        "skills.offer86.cn",
+        "skills.86offer.com",
+        "skills.86offer.cn"
+      ]
+    },
+    "platform.api-gateway": {
+      "httpHost": "api.sdkwork.com",
+      "environments": {
+        "development": {
+          "httpHosts": [
+            "api-dev.sdkwork.com",
+            "api-dev.birdcoder.com",
+            "api-dev.dtupay.com",
+            "api-dev.noaper.com",
+            "api-dev.sdkwork.cn",
+            "api-dev.birdcoder.cn",
+            "api-dev.dtupay.cn",
+            "api-dev.noaper.cn",
+            "api-dev.skubc.com",
+            "api-dev.skubc.cn",
+            "api-dev.zowalk.com",
+            "api-dev.zowalk.cn",
+            "api-dev.offer86.com",
+            "api-dev.offer86.cn",
+            "api-dev.86offer.com",
+            "api-dev.86offer.cn"
+          ]
+        },
+        "test": {
+          "httpHosts": [
+            "api-test.sdkwork.com",
+            "api-test.birdcoder.com",
+            "api-test.dtupay.com",
+            "api-test.noaper.com",
+            "api-test.sdkwork.cn",
+            "api-test.birdcoder.cn",
+            "api-test.dtupay.cn",
+            "api-test.noaper.cn",
+            "api-test.skubc.com",
+            "api-test.skubc.cn",
+            "api-test.zowalk.com",
+            "api-test.zowalk.cn",
+            "api-test.offer86.com",
+            "api-test.offer86.cn",
+            "api-test.86offer.com",
+            "api-test.86offer.cn"
+          ]
+        },
+        "staging": {
+          "httpHosts": [
+            "api-staging.sdkwork.com",
+            "api-staging.birdcoder.com",
+            "api-staging.dtupay.com",
+            "api-staging.noaper.com",
+            "api-staging.sdkwork.cn",
+            "api-staging.birdcoder.cn",
+            "api-staging.dtupay.cn",
+            "api-staging.noaper.cn",
+            "api-staging.skubc.com",
+            "api-staging.skubc.cn",
+            "api-staging.zowalk.com",
+            "api-staging.zowalk.cn",
+            "api-staging.offer86.com",
+            "api-staging.offer86.cn",
+            "api-staging.86offer.com",
+            "api-staging.86offer.cn"
+          ]
+        },
+        "demo": {
+          "httpHosts": [
+            "api-demo.sdkwork.com",
+            "api-demo.birdcoder.com",
+            "api-demo.dtupay.com",
+            "api-demo.noaper.com",
+            "api-demo.sdkwork.cn",
+            "api-demo.birdcoder.cn",
+            "api-demo.dtupay.cn",
+            "api-demo.noaper.cn",
+            "api-demo.skubc.com",
+            "api-demo.skubc.cn",
+            "api-demo.zowalk.com",
+            "api-demo.zowalk.cn",
+            "api-demo.offer86.com",
+            "api-demo.offer86.cn",
+            "api-demo.86offer.com",
+            "api-demo.86offer.cn"
+          ]
+        }
+      },
+      "httpHosts": [
+        "api.sdkwork.com",
+        "api.birdcoder.com",
+        "api.dtupay.com",
+        "api.noaper.com",
+        "api.sdkwork.cn",
+        "api.birdcoder.cn",
+        "api.dtupay.cn",
+        "api.noaper.cn",
+        "api.skubc.com",
+        "api.skubc.cn",
+        "api.zowalk.com",
+        "api.zowalk.cn",
+        "api.offer86.com",
+        "api.offer86.cn",
+        "api.86offer.com",
+        "api.86offer.cn"
+      ]
+    }
+  },
+  "components": {
+    "applicationServer": {
+      "crate": "sdkwork-api-skills-standalone-gateway",
+      "binary": "sdkwork-api-skills-standalone-gateway"
+    }
+  },
+  "orchestration": {
+    "profiles": {
+      "standalone.development": {
+        "processes": [
+          {
+            "id": "application.public-ingress",
+            "crate": "sdkwork-api-skills-standalone-gateway",
+            "binary": "sdkwork-api-skills-standalone-gateway",
+            "required": true,
+            "role": "api-standalone-gateway"
+          }
+        ],
+        "healthSurfaces": [
+          "application.public-ingress"
+        ],
+        "browserDeliveries": []
+      },
+      "cloud.development": {
+        "processes": [],
+        "healthSurfaces": [
+          "application.public-ingress",
+          "platform.api-gateway"
+        ]
+      },
+      "cloud.production": {
+        "processes": [
+          {
+            "id": "application.public-ingress",
+            "crate": "sdkwork-api-skills-standalone-gateway",
+            "binary": "sdkwork-api-skills-standalone-gateway",
+            "required": true,
+            "role": "api-standalone-gateway"
+          }
+        ],
+        "healthSurfaces": [
+          "application.public-ingress",
+          "platform.api-gateway"
+        ]
+      },
+      "standalone.production": {
+        "processes": [
+          {
+            "id": "application.public-ingress",
+            "crate": "sdkwork-api-skills-standalone-gateway",
+            "binary": "sdkwork-api-skills-standalone-gateway",
+            "required": true,
+            "role": "api-standalone-gateway"
+          }
+        ],
+        "healthSurfaces": [
+          "application.public-ingress"
+        ],
+        "browserDeliveries": []
+      },
+      "standalone.test": {
+        "processes": [
+          {
+            "id": "application.public-ingress",
+            "crate": "sdkwork-api-skills-standalone-gateway",
+            "binary": "sdkwork-api-skills-standalone-gateway",
+            "required": true,
+            "role": "api-standalone-gateway"
+          }
+        ],
+        "healthSurfaces": [
+          "application.public-ingress"
+        ],
+        "browserDeliveries": []
+      },
+      "standalone.staging": {
+        "processes": [
+          {
+            "id": "application.public-ingress",
+            "crate": "sdkwork-api-skills-standalone-gateway",
+            "binary": "sdkwork-api-skills-standalone-gateway",
+            "required": true,
+            "role": "api-standalone-gateway"
+          }
+        ],
+        "healthSurfaces": [
+          "application.public-ingress"
+        ],
+        "browserDeliveries": []
+      },
+      "cloud.test": {
+        "processes": [],
+        "healthSurfaces": [
+          "application.public-ingress",
+          "platform.api-gateway"
+        ]
+      },
+      "cloud.staging": {
+        "processes": [
+          {
+            "id": "application.public-ingress",
+            "crate": "sdkwork-api-skills-standalone-gateway",
+            "binary": "sdkwork-api-skills-standalone-gateway",
+            "required": true,
+            "role": "api-standalone-gateway"
+          }
+        ],
+        "healthSurfaces": [
+          "application.public-ingress",
+          "platform.api-gateway"
+        ]
+      },
+      "standalone.demo": {
+        "processes": [],
+        "healthSurfaces": [],
+        "browserDeliveries": []
+      },
+      "cloud.demo": {
+        "processes": [],
+        "healthSurfaces": []
+      }
+    }
+  },
+  "packaging": {
+    "cloudConfigFiles": [],
+    "targets": [
+      {
+        "id": "container-noarch-cloud-container-config-bundle-tar-gz",
+        "profile": "container",
+        "platform": "container",
+        "architecture": "noarch",
+        "formats": [
+          "tar.gz"
+        ],
+        "runner": "ubuntu-24.04",
+        "outputGlob": "dist/cloud-config/sdkwork-skills-api-gateway-config-*.tar.gz",
+        "deploymentProfile": "cloud",
+        "runtimeTarget": "container",
+        "variant": "config-bundle"
+      }
+    ]
+  }
+}

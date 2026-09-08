@@ -1,0 +1,80 @@
+target/
+**/target/
+node_modules/
+**/node_modules/
+dist/
+**/dist/
+.env
+.env.*
+!.env.example
+
+# SDKWork local environment and runtime config overrides
+.env.local
+.env.development.local
+.env.test.local
+.env.staging.local
+.env.production.local
+.env.postgres
+.env.release.local
+config/*.local.toml
+
+# SDKWork local runtime state
+.runtime/
+**/.runtime/
+!.env.*.example
+!.env.postgres.example
+coverage/
+**/.pnpm-store/
+.DS_Store
+Thumbs.db
+
+# Generated runtime files (do not track)
+**/public/runtime-env.json
+.idea/
+.vscode/
+*.log
+**/.sdkwork/local/
+**/.sdkwork/secrets/
+**/.sdkwork/cache/
+**/.sdkwork/tmp/
+**/.sdkwork/dart/pub-cache/
+**/.sdkwork/manual-backups/
+**/.sdkwork/sdkwork-generator-changes.json
+**/.sdkwork/sdkwork-generator-manifest.json
+**/.sdkwork/sdkwork-generator-report.json
+
+# SDKWork local-only and generated artifacts
+.env
+.env.*
+!.env.example
+!.env.*.example
+**/build/
+*.log
+.DS_Store
+Thumbs.db
+
+# SDKWork baseline ignore patterns (auto-appended)
+.pnpm-store/
+.turbo/
+**/.turbo/
+*.sqlite-shm
+*.sqlite-wal
+**/test-results/
+*.tsbuildinfo
+**/.cache/
+**/*.bootstrap.local.json
+etc/**/*.local.*
+/etc/secrets/
+
+
+# Local artifacts and build output (do not commit)
+node_modules.stale.*/
+
+# Build artifacts
+/bin/
+sdks/**/*.js
+sdks/**/*.d.ts
+sdks/**/*.js.map
+sdks/**/*.d.ts.map
+
+# Local build artifacts / workspace junk (auto-sync)

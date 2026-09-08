@@ -1,0 +1,13 @@
+environment = "development"
+
+[http]
+
+[[http.server]]
+listen = ["80"]
+serverName = ["skills-dev.sdkwork.com", "skills-dev.birdcoder.com", "skills-dev.dtupay.com", "skills-dev.noaper.com", "skills-dev.sdkwork.cn", "skills-dev.birdcoder.cn", "skills-dev.dtupay.cn", "skills-dev.noaper.cn", "skills-dev.skubc.com", "skills-dev.skubc.cn", "skills-dev.zowalk.com", "skills-dev.zowalk.cn", "skills-dev.offer86.com", "skills-dev.offer86.cn", "skills-dev.86offer.com", "skills-dev.86offer.cn"]
+include = ["snippets/adaptive-web.named-locations.conf", "snippets/gateway-api-locations.nonproduction.conf"]
+
+[[http.server.location]]
+match = "/"
+include = ["snippets/adaptive-web.dispatch.conf"]
+

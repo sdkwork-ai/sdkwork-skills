@@ -1,0 +1,57 @@
+{
+  "schemaVersion": 1,
+  "kind": "sdkwork.process-database-pool",
+  "profile": {
+    "exampleFile": ".env.postgres.example",
+    "database": "sdkwork_ai_dev",
+    "schema": "sdkwork_ai_dev"
+  },
+  "processes": [
+    {
+      "id": "sdkwork-api-skills-standalone-gateway",
+      "entrypoint": "crates/sdkwork-api-skills-standalone-gateway/src/bin/app_main.rs",
+      "poolOwner": "crates/sdkwork-skills-database-host/src/lib.rs",
+      "driver": "sdkwork_database_sqlx::DatabasePool",
+      "poolCount": 1,
+      "databaseUrlEnv": "SDKWORK_DATABASE_URL",
+      "schemaEnv": "SDKWORK_DATABASE_SCHEMA",
+      "maxConnectionsEnv": "SDKWORK_DATABASE_MAX_CONNECTIONS",
+      "productionSourceRoots": [
+        "crates/sdkwork-api-skills-standalone-gateway/src",
+        "crates/sdkwork-api-skills-assembly/src",
+        "crates/sdkwork-skills-database-host/src",
+        "crates/sdkwork-intelligence-skills-repository-sqlx/src"
+      ],
+      "consumers": [
+        {
+          "module": "Skills database lifecycle and Snowflake node allocator",
+          "poolMode": "installed-process-pool",
+          "evidence": [
+            "crates/sdkwork-skills-database-host/src/lib.rs"
+          ]
+        },
+        {
+          "module": "Skills SQLx repository",
+          "poolMode": "injected",
+          "evidence": [
+            "crates/sdkwork-api-skills-assembly/src/bootstrap.rs",
+            "crates/sdkwork-intelligence-skills-repository-sqlx/src/lib.rs"
+          ]
+        },
+        {
+          "module": "Skills readiness",
+          "poolMode": "injected",
+          "evidence": [
+            "crates/sdkwork-api-skills-assembly/src/bootstrap.rs"
+          ]
+        }
+      ],
+      "temporaryDriverExceptions": []
+    }
+  ],
+  "verification": [
+    "node ../sdkwork-specs/tools/check-process-shared-database-pool.mjs --root .",
+    "cargo test -p sdkwork-intelligence-skills-repository-sqlx",
+    "cargo check -p sdkwork-api-skills-standalone-gateway"
+  ]
+}

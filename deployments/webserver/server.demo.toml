@@ -1,0 +1,13 @@
+environment = "demo"
+
+[http]
+
+[[http.server]]
+listen = ["80"]
+serverName = ["skills-demo.sdkwork.com", "skills-demo.birdcoder.com", "skills-demo.dtupay.com", "skills-demo.noaper.com", "skills-demo.sdkwork.cn", "skills-demo.birdcoder.cn", "skills-demo.dtupay.cn", "skills-demo.noaper.cn", "skills-demo.skubc.com", "skills-demo.skubc.cn", "skills-demo.zowalk.com", "skills-demo.zowalk.cn", "skills-demo.offer86.com", "skills-demo.offer86.cn", "skills-demo.86offer.com", "skills-demo.86offer.cn"]
+include = ["snippets/adaptive-web.named-locations.conf", "snippets/gateway-api-locations.nonproduction.conf"]
+
+[[http.server.location]]
+match = "/"
+include = ["snippets/adaptive-web.dispatch.conf"]
+

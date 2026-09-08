@@ -1,0 +1,37 @@
+# Skills Documentation
+
+## Audience Routing
+
+| Audience | Read First | Then Read |
+| --- | --- | --- |
+| Product or business | [product/prd/PRD.md](product/prd/PRD.md) | [product/requirements/](product/requirements/) |
+| Architect | [architecture/tech/TECH_ARCHITECTURE.md](architecture/tech/TECH_ARCHITECTURE.md) | [architecture/decisions/](architecture/decisions/) |
+| Developer | [guides/developer/README.md](guides/developer/README.md) | [engineering/plans/](engineering/plans/) |
+| Operator | [guides/operator/README.md](guides/operator/README.md) | [runbooks/](runbooks/) |
+| Integrator | [guides/integrator/README.md](guides/integrator/README.md) | repository `apis/` and `sdks/` |
+| Agent | [../AGENTS.md](../AGENTS.md) | [INDEX.yaml](INDEX.yaml) |
+
+## Canon Documents
+
+| Document | Path |
+| --- | --- |
+| Product PRD | [product/prd/PRD.md](product/prd/PRD.md) |
+| Technical architecture | [architecture/tech/TECH_ARCHITECTURE.md](architecture/tech/TECH_ARCHITECTURE.md) |
+| Domain decision | [architecture/decisions/ADR-20260722-skills-domain-ownership-and-artifact-model.md](architecture/decisions/ADR-20260722-skills-domain-ownership-and-artifact-model.md) |
+
+## Related Specs
+
+- `DOCUMENTATION_SPEC.md`
+- `SDKWORK_WORKSPACE_SPEC.md`
+- `REQUIREMENTS_SPEC.md`
+- `ARCHITECTURE_DECISION_SPEC.md`
+
+## Verification
+
+```bash
+pnpm verify
+node ../sdkwork-specs/tools/check-api-response-envelope.mjs --workspace .
+node ../sdkwork-specs/tools/check-repository-docs-standard.mjs --root .
+pnpm api:assembly:validate
+pnpm topology:validate
+```
