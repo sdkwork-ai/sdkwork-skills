@@ -1,6 +1,6 @@
 import { createClient as createDriveSdkClient, type SdkworkDriveAppClient } from '@sdkwork/drive-app-sdk';
-import type { AuthTokenManager } from '@sdkwork/sdk-common';
-import { resolveBaseUrl } from '@sdkwork/sdk-common';
+import {AuthTokenManager} from '@sdkwork/sdk-common';
+import {resolveBaseUrlWithAlignProtocol} from '@sdkwork/sdk-common';
 import { createClient as createAppSdkClient, type SdkworkAppClient } from '@sdkwork/skills-app-sdk';
 import { createClient as createBackendSdkClient, type SdkworkBackendClient } from '@sdkwork/skills-backend-sdk';
 import { normalizeApiBaseUrl } from '@sdkwork/skills-pc-commons/runtime';
@@ -33,7 +33,7 @@ function resolveAppApiBaseUrl(config?: SkillsAppClientConfig): string {
   // suffix this SDK client expects.
   return normalizeApiBaseUrl(
     config?.appApiBaseUrl ??
-      resolveBaseUrl({ envKey: 'SDKWORK_API_BASE_URL', preservePath: true }).url ??
+      resolveBaseUrlWithAlignProtocol({ envKey: 'SDKWORK_API_BASE_URL', preservePath: true }).url ??
       '',
   );
 }
@@ -43,7 +43,7 @@ function resolveDriveAppApiBaseUrl(config?: SkillsAppClientConfig): string {
   // /app/v3/api path suffix.
   return normalizeApiBaseUrl(
     config?.driveAppApiBaseUrl ??
-      resolveBaseUrl({ envKey: 'SDKWORK_API_BASE_URL', preservePath: true }).url ??
+      resolveBaseUrlWithAlignProtocol({ envKey: 'SDKWORK_API_BASE_URL', preservePath: true }).url ??
       '',
   );
 }
@@ -81,7 +81,7 @@ function resolveBackendApiBaseUrl(config: SkillsBackendClientConfig): string {
   // SDK client expects (carried by the configured base-url value).
   return normalizeApiBaseUrl(
     config.backendApiBaseUrl ??
-      resolveBaseUrl({ envKey: 'SDKWORK_API_BASE_URL', preservePath: true }).url ??
+      resolveBaseUrlWithAlignProtocol({ envKey: 'SDKWORK_API_BASE_URL', preservePath: true }).url ??
       '',
   );
 }

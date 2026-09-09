@@ -1,5 +1,5 @@
 import { isBlank, trim } from '@sdkwork/utils';
-import { resolveBaseUrl } from '@sdkwork/sdk-common';
+import {resolveBaseUrlWithAlignProtocol} from '@sdkwork/sdk-common';
 import manifest from '../../../../sdkwork.app.config.json';
 
 export type SdkworkSkillsPcEnvironment = 'development' | 'test' | 'staging' | 'production';
@@ -109,7 +109,7 @@ export function resolveSdkworkSkillsPcRuntimeConfig(
   // Single shared base-url key (@sdkwork/sdk-common): the matching API host is
   // chosen from the current page's environment + brand. preservePath keeps the
   // /app/v3/api or /backend/v3/api suffix carried by the configured value.
-  const apiBaseUrl = resolveBaseUrl({ envKey: 'SDKWORK_API_BASE_URL', preservePath: true }).url;
+  const apiBaseUrl = resolveBaseUrlWithAlignProtocol({ envKey: 'SDKWORK_API_BASE_URL', preservePath: true }).url;
   return {
     appApiBaseUrl: apiBaseUrl || sdkBaseUrls?.appApiBaseUrl || APP_API_PREFIX,
     appDisplayName: manifest.app.displayName,
