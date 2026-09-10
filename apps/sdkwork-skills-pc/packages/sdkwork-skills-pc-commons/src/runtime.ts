@@ -1,10 +1,11 @@
+import { readRuntimeEnv } from '@sdkwork/sdk-common';
 import { isBlank, trim } from '@sdkwork/utils';
 
 /**
  * Runtime environment accessor, unified on @sdkwork/sdk-common so every
  * module shares one implementation (Vite import.meta.env + Node process.env).
  */
-export { readRuntimeEnv } from '@sdkwork/sdk-common';
+export { readRuntimeEnv };
 
 export function normalizeApiBaseUrl(baseUrl: string): string {
   const normalized = trim(baseUrl);
