@@ -71,7 +71,6 @@ etc/**/*.local.*
 node_modules.stale.*/
 
 # Build artifacts
-/bin/
 sdks/**/*.js
 sdks/**/*.d.ts
 sdks/**/*.js.map
