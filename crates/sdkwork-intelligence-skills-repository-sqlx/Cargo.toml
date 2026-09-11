@@ -1,9 +1,13 @@
 [package]
+rust-version.workspace = true
 name = "sdkwork-intelligence-skills-repository-sqlx"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
 
+
+[lints]
+workspace = true
 [dependencies]
 async-trait.workspace = true
 chrono = { version = "0.4", features = ["serde"] }
