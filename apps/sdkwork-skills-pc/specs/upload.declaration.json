@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "appId": "sdkwork-skills-pc",
+  "declarations": [
+    {
+      "appResourceType": "skill.package_artifact",
+      "appResourceIdKind": "entity",
+      "scene": "skill-package-upload",
+      "source": "sdkwork-skills-pc",
+      "uploadProfileCode": "archive",
+      "retention": "long_term",
+      "purpose": "Skill package archive uploaded by an author from the self-service surface so the skill can be installed."
+    }
+  ]
+}

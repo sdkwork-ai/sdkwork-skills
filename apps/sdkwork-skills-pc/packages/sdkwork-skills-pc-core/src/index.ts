@@ -40,6 +40,14 @@ export {
 export { SkillsClientsProvider, useSkillsClients } from './context';
 
 export {
+  SKILLS_APP_ID,
+  SKILLS_UPLOAD_SOURCE,
+  SKILLS_UPLOAD_DECLARATIONS,
+  SKILLS_PACKAGE_ARTIFACT_UPLOAD,
+  type SkillsUploadDeclarationEntry,
+} from './sdk/uploadDeclaration';
+
+export {
   createOwnSkillPackage,
   deleteOwnSkillPackage,
   installUserSkill,

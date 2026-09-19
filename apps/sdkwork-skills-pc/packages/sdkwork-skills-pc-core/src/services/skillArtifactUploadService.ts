@@ -1,4 +1,5 @@
 import type { SkillsAppClients } from '../clients';
+import { SKILLS_PACKAGE_ARTIFACT_UPLOAD } from '../sdk/uploadDeclaration';
 import { formatDriveArtifactRef } from '@sdkwork/skills-pc-commons/driveUri';
 import { hexEncode, Sha256Hasher } from '@sdkwork/utils';
 import {
@@ -51,15 +52,18 @@ export async function uploadSkillPackageArchive(
   }
 
   const checksumSha256 = await calculateSha256(file);
+  // `appResourceType`/`scene`/`source`/`uploadProfileCode` come from this application's upload
+  // declaration (DRIVE_SPEC.md section 18): a skill package archive always has the same shape,
+  // so no caller may substitute any of them.
   const uploadResult = await driveClient.uploader.upload({
     file,
-    appResourceType: 'skills-pc-package-upload',
+    appResourceType: SKILLS_PACKAGE_ARTIFACT_UPLOAD.appResourceType,
     appResourceId: file.name,
-    scene: 'skills_self_service_package_upload',
-    source: 'pc_local_file',
+    scene: SKILLS_PACKAGE_ARTIFACT_UPLOAD.scene,
+    source: SKILLS_PACKAGE_ARTIFACT_UPLOAD.source,
     spaceId,
     parentNodeId: options.parentNodeId ?? resolveSkillsDriveParentNodeId(),
-    uploadProfileCode: 'archive',
+    uploadProfileCode: SKILLS_PACKAGE_ARTIFACT_UPLOAD.uploadProfileCode,
     originalFileName: file.name,
     contentType: file.type || 'application/octet-stream',
     checksumSha256Hex: `sha256:${checksumSha256}`,
