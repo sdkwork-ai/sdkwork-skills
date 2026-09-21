@@ -1,3 +1,4 @@
+import { readBootstrapAccessTokenFromProcessEnv } from '@sdkwork/iam-credential-entry';
 import { isBlank, trim } from '@sdkwork/utils';
 import { createTokenManager, type AuthTokenManager } from '@sdkwork/sdk-common';
 
@@ -43,7 +44,16 @@ export function clearStoredTokens(): void {
 }
 
 export function createSkillsTokenManager(): AuthTokenManager {
-  return createTokenManager();
+  const manager = createTokenManager();
+  // Fall back to the private bootstrap Access-Token artifact when no
+  // interactive session exists (APP_SDK_INTEGRATION_SPEC section 4).
+  // The generated SDK transports read `Access-Token` exclusively from
+  // `getAccessToken()` and fail before dispatch when it is empty.
+  const bootstrapAccessToken = readBootstrapAccessTokenFromProcessEnv();
+  if (bootstrapAccessToken) {
+    manager.setTokens({ accessToken: bootstrapAccessToken });
+  }
+  return manager;
 }
 
 export function hasStoredSession(): boolean {
