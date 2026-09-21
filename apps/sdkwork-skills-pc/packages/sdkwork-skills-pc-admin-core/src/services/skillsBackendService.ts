@@ -12,6 +12,7 @@ import type {
   SkillPackageRecord,
   SkillPackagesPageData,
   UpdateSkillCapabilityCommand,
+  UpdateSkillCategoryCommand,
   UpdateSkillPackageCommand,
 } from '@sdkwork/skills-backend-sdk';
 
@@ -92,4 +93,23 @@ export async function createSkillCategory(
   input: CreateSkillCategoryCommand,
 ): Promise<SkillCategoryRecord> {
   return clients.backend.skills.skillCategories.create(input);
+}
+
+/**
+ * Updates an existing Skill category.
+ *
+ * The category `code` is immutable after creation — the write contract
+ * (`UpdateSkillCategoryCommand`) carries no `code` field, and the console binds
+ * `permissionCode` to the code at creation time
+ * (`packageManagePermissionForCategory`). Renaming is therefore out of scope
+ * here; admins adjust the display name, description, sort weight, and status.
+ * `version` is required for optimistic concurrency and comes from the record
+ * being edited.
+ */
+export async function updateSkillCategory(
+  clients: SkillsBackendClients,
+  categoryId: string,
+  input: UpdateSkillCategoryCommand,
+): Promise<SkillCategoryRecord> {
+  return clients.backend.skills.skillCategories.update(categoryId, input);
 }

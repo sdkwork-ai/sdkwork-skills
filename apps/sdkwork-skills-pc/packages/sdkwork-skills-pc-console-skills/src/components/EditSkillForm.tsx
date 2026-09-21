@@ -7,6 +7,8 @@ import {
   type SkillPackageRecord,
 } from '@sdkwork/skills-pc-core';
 import { useSkillsConsoleT } from '../locale.tsx';
+import { SkillCategorySelect } from './SkillCategorySelect.tsx';
+import { useSkillCategories } from '../hooks/useSkillCategories.ts';
 
 function Field({
   hint,
@@ -35,6 +37,7 @@ export interface EditSkillFormProps {
 export function EditSkillForm({ packageId, onSuccess, onCancel }: EditSkillFormProps) {
   const t = useSkillsConsoleT();
   const clients = useSkillsClients();
+  const { categories, loading: categoriesLoading, error: categoriesError } = useSkillCategories();
   const [record, setRecord] = useState<SkillPackageRecord | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -42,7 +45,7 @@ export function EditSkillForm({ packageId, onSuccess, onCancel }: EditSkillFormP
     displayName: '',
     summary: '',
     description: '',
-    categories: '',
+    categoryCode: '',
     tags: '',
   });
 
@@ -63,7 +66,9 @@ export function EditSkillForm({ packageId, onSuccess, onCancel }: EditSkillFormP
           displayName: found.displayName ?? '',
           summary: found.summary ?? '',
           description: found.description ?? '',
-          categories: (found.categories ?? []).join(', '),
+          // The package owns a category list, but the console models exactly one
+          // managed category (the one used to authorise package management).
+          categoryCode: (found.categories ?? [])[0] ?? '',
           tags: (found.tags ?? []).join(', '),
         });
       })
@@ -81,6 +86,10 @@ export function EditSkillForm({ packageId, onSuccess, onCancel }: EditSkillFormP
     event.preventDefault();
     if (!record) return;
     setError(null);
+    if (isBlank(trim(form.categoryCode))) {
+      setError(t('edit.error.categoryRequired'));
+      return;
+    }
     setSubmitting(true);
     try {
       await updateOwnSkillPackage(clients, packageId, {
@@ -88,10 +97,7 @@ export function EditSkillForm({ packageId, onSuccess, onCancel }: EditSkillFormP
         displayName: trim(form.displayName),
         summary: trim(form.summary) || null,
         description: trim(form.description) || null,
-        categories: form.categories
-          .split(',')
-          .map((value) => trim(value))
-          .filter((value) => value.length > 0),
+        categories: [trim(form.categoryCode)],
         tags: form.tags
           .split(',')
           .map((value) => trim(value))
@@ -150,11 +156,19 @@ export function EditSkillForm({ packageId, onSuccess, onCancel }: EditSkillFormP
           rows={4}
         />
       </Field>
-      <Field label={t('edit.field.categories')} hint={t('edit.field.categories.hint')}>
-        <input
-          value={form.categories}
-          onChange={(event) => setForm({ ...form, categories: event.target.value })}
-          placeholder={t('edit.placeholder.categories')}
+      <Field label={t('edit.field.category')}>
+        {categoriesError ? (
+          <p className="skills-console-error" role="alert">
+            {categoriesError}
+          </p>
+        ) : null}
+        <SkillCategorySelect
+          id="edit-skill-category"
+          categories={categories}
+          value={form.categoryCode}
+          loading={categoriesLoading}
+          disabled={submitting}
+          onChange={(categoryCode) => setForm({ ...form, categoryCode })}
         />
       </Field>
       <Field label={t('edit.field.tags')} hint={t('edit.field.tags.hint')}>
@@ -173,7 +187,7 @@ export function EditSkillForm({ packageId, onSuccess, onCancel }: EditSkillFormP
         <button
           className="skills-console-primary"
           type="submit"
-          disabled={isBlank(trim(form.displayName)) || submitting}
+          disabled={isBlank(trim(form.displayName)) || isBlank(trim(form.categoryCode)) || submitting}
         >
           {t('edit.save')}
         </button>

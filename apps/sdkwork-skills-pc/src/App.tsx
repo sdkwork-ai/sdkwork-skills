@@ -1,12 +1,13 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { SkillsClientsProvider } from '@sdkwork/skills-pc-core';
 import { SKILLS_ADMIN_PERMISSIONS } from '@sdkwork/skills-pc-admin-core';
-import { AdminCategoriesPage, AdminSkillsPage } from '@sdkwork/skills-pc-admin';
+import { AdminSkillsPage } from '@sdkwork/skills-pc-admin';
 import { ConsoleSkillsPage } from '@sdkwork/skills-pc-console';
 import { CreateSkillPage, MySkillsPage } from '@sdkwork/skills-pc-console-skills';
 import {
   PackageArtifactsPage,
   SkillCapabilitiesPage,
+  SkillCategoriesPage,
   UpdateSkillPackagePage,
 } from '@sdkwork/skills-pc-admin-skill';
 import { SkillDetailPage, SkillsHubPage } from '@sdkwork/skills-pc-hub';
@@ -73,7 +74,7 @@ export function App() {
                   permission={SKILLS_ADMIN_PERMISSIONS.categoryManage}
                   runtime={runtime}
                 >
-                  <AdminCategoriesPage />
+                  <SkillCategoriesPage />
                 </AdminPermissionGate>
               }
             />

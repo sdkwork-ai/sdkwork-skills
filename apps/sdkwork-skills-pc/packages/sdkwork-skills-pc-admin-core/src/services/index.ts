@@ -9,5 +9,6 @@ export {
   listPackageArtifacts,
   listSkillCapabilities,
   updateSkillCapability,
+  updateSkillCategory,
   updateSkillPackage,
 } from './skillsBackendService';

@@ -7,6 +7,8 @@ import {
   useSkillsClients,
 } from '@sdkwork/skills-pc-core';
 import { useSkillsConsoleT } from '../locale.tsx';
+import { SkillCategorySelect } from './SkillCategorySelect.tsx';
+import { useSkillCategories } from '../hooks/useSkillCategories.ts';
 
 function createEmptyForm(t: ReturnType<typeof useSkillsConsoleT>) {
   return {
@@ -14,7 +16,7 @@ function createEmptyForm(t: ReturnType<typeof useSkillsConsoleT>) {
     code: 'selfservice-sample',
     displayName: t('create.default.displayName'),
     summary: t('create.default.summary'),
-    categories: [] as string[],
+    categoryCode: '',
     tags: ['self-service'] as string[],
     initialArtifact: {
       versionLabel: '1.0.0',
@@ -59,6 +61,7 @@ export function CreateSkillForm({ onSuccess, onCancel }: CreateSkillFormProps) {
   const t = useSkillsConsoleT();
   const clients = useSkillsClients();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { categories, loading: categoriesLoading, error: categoriesError } = useSkillCategories();
   const [form, setForm] = useState(() => createEmptyForm(t));
   const [error, setError] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -95,6 +98,10 @@ export function CreateSkillForm({ onSuccess, onCancel }: CreateSkillFormProps) {
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
     setError(null);
+    if (isBlank(trim(form.categoryCode))) {
+      setError(t('create.error.categoryRequired'));
+      return;
+    }
     if (!isDriveArtifactRef(form.initialArtifact.artifactRef)) {
       setError(t('create.error.needArtifact'));
       return;
@@ -105,7 +112,10 @@ export function CreateSkillForm({ onSuccess, onCancel }: CreateSkillFormProps) {
     }
     setSubmitting(true);
     try {
-      const record = await createOwnSkillPackage(clients, form);
+      const record = await createOwnSkillPackage(clients, {
+        ...form,
+        categories: [form.categoryCode],
+      });
       setForm(createEmptyForm(t));
       setSelectedFileName(null);
       if (fileInputRef.current) {
@@ -166,6 +176,21 @@ export function CreateSkillForm({ onSuccess, onCancel }: CreateSkillFormProps) {
           required
         />
       </Field>
+      <Field label={t('create.field.category')}>
+        {categoriesError ? (
+          <p className="skills-console-error" role="alert">
+            {categoriesError}
+          </p>
+        ) : null}
+        <SkillCategorySelect
+          id="create-skill-category"
+          categories={categories}
+          value={form.categoryCode}
+          loading={categoriesLoading}
+          disabled={submitting}
+          onChange={(categoryCode) => setForm({ ...form, categoryCode })}
+        />
+      </Field>
       <Field label={t('create.field.entrypoint')}>
         <input
           value={form.initialArtifact.entrypoint}
@@ -211,7 +236,12 @@ export function CreateSkillForm({ onSuccess, onCancel }: CreateSkillFormProps) {
         <button
           className="skills-console-primary"
           type="submit"
-          disabled={isBlank(trim(form.initialArtifact.artifactRef)) || uploading || submitting}
+          disabled={
+            isBlank(trim(form.categoryCode)) ||
+            isBlank(trim(form.initialArtifact.artifactRef)) ||
+            uploading ||
+            submitting
+          }
         >
           {t('create.submit')}
         </button>

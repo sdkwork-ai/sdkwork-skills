@@ -26,5 +26,6 @@ export {
   listPackageArtifacts,
   listSkillCapabilities,
   updateSkillCapability,
+  updateSkillCategory,
   updateSkillPackage,
 } from './services';

@@ -16,6 +16,7 @@ import {
   listManagedSkillCategories,
   listManagedSkillPackages,
   packageManagePermissionForCategory,
+  updateSkillCategory,
   updateSkillPackage,
 } from '@sdkwork/skills-pc-admin-core';
 
@@ -353,117 +354,6 @@ export function AdminSkillsPage({
           void confirmDelete();
         }}
       />
-    </section>
-  );
-}
-
-export function AdminCategoriesPage() {
-  const clients = useSkillsClients();
-  const [categories, setCategories] = useState<SkillCategoryRecord[]>([]);
-  const [error, setError] = useState<string | null>(null);
-  const [createOpen, setCreateOpen] = useState(false);
-  const [form, setForm] = useState<CreateCategoryInput>({
-    code: 'general',
-    name: 'General',
-    description: 'Default category',
-    sortWeight: 0,
-    permissionCode: packageManagePermissionForCategory('general'),
-  });
-
-  async function reload() {
-    const page = await listManagedSkillCategories(clients);
-    setCategories(page.items);
-  }
-
-  useEffect(() => {
-    reload().catch((cause: Error) => setError(cause.message));
-  }, [clients]);
-
-  async function onSubmit(event: FormEvent) {
-    event.preventDefault();
-    setError(null);
-    try {
-      await createSkillCategory(clients, form);
-      setCreateOpen(false);
-      await reload();
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : String(cause));
-    }
-  }
-
-  return (
-    <section className="skills-console-page">
-      <header className="skills-console-header" style={{ marginBottom: 0 }}>
-        <h2>Admin Categories</h2>
-        <button type="button" className="skills-console-primary" onClick={() => setCreateOpen(true)}>
-          Create category
-        </button>
-      </header>
-      {error ? <p role="alert">{error}</p> : null}
-      <div className="data-surface">
-        <div className="table-frame">
-          {categories.length === 0 ? (
-            <div className="empty-state">
-              <span>No categories yet.</span>
-              <button type="button" className="skills-console-primary" onClick={() => setCreateOpen(true)}>
-                Create category
-              </button>
-            </div>
-          ) : (
-            <table>
-              <thead>
-                <tr>
-                  <th>Name</th>
-                  <th>Code</th>
-                  <th>Permission</th>
-                </tr>
-              </thead>
-              <tbody>
-                {categories.map((item) => (
-                  <tr key={item.id}>
-                    <td>{item.name}</td>
-                    <td>{item.code}</td>
-                    <td>{item.permissionCode}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </div>
-      </div>
-      <SurfaceDrawer open={createOpen} title="Create category" onClose={() => setCreateOpen(false)}>
-        <form onSubmit={onSubmit} style={{ display: 'grid', gap: 8 }}>
-          <input
-            value={form.code}
-            onChange={(event) => {
-              const code = event.target.value;
-              setForm({
-                ...form,
-                code,
-                permissionCode: packageManagePermissionForCategory(code),
-              });
-            }}
-            placeholder="code"
-            required
-          />
-          <input
-            value={form.name}
-            onChange={(event) => setForm({ ...form, name: event.target.value })}
-            placeholder="name"
-            required
-          />
-          <input
-            value={form.permissionCode ?? ''}
-            onChange={(event) => setForm({ ...form, permissionCode: event.target.value })}
-            placeholder="permission code"
-            required
-          />
-          <div className="sdkwork-surface-drawer-form-actions">
-            <button type="button" onClick={() => setCreateOpen(false)}>Cancel</button>
-            <button type="submit">Create Category</button>
-          </div>
-        </form>
-      </SurfaceDrawer>
     </section>
   );
 }
