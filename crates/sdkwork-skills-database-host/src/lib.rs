@@ -2,6 +2,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use sdkwork_database_config::{DatabaseConfig, DatabaseEngine};
+use sdkwork_database_drift::DriftEngine;
 use sdkwork_database_id::{
     NodeAllocatorConfig, NodeLease, SnowflakeIdGenerator, SnowflakeNodeAllocator,
 };
@@ -69,6 +70,32 @@ pub async fn bootstrap_skills_database(pool: DatabasePool) -> Result<SkillsDatab
             .migrate()
             .await
             .map_err(|error| format!("skills database migrate failed: {error}"))?;
+    }
+
+    // DATABASE_SPEC §35: readiness must fail when required migrations are
+    // missing or the schema drifts from the contract. Drift is observation only
+    // (DATABASE_FRAMEWORK_SPEC §4.2); repair runs `db:migrate`. This gate must
+    // run before the Snowflake node lease is allocated so a drifted schema fails
+    // startup instead of consuming a lease and then surfacing as a request-time
+    // error against a surface the composition layer already declared as served
+    // (DATABASE_FRAMEWORK_SPEC §4.4.1).
+    let drift = DriftEngine::new(pool.clone(), module.clone())
+        .analyze()
+        .await
+        .map_err(|error| format!("skills database drift check failed: {error}"))?;
+    if drift.summary.error > 0 {
+        let details = drift
+            .diffs
+            .iter()
+            .filter(|diff| diff.severity == "error")
+            .take(5)
+            .map(|diff| diff.message.as_str())
+            .collect::<Vec<_>>()
+            .join("; ");
+        return Err(format!(
+            "skills database schema drift detected ({} error(s)): {details}. Run `pnpm db:migrate` and then `pnpm db:drift:check`",
+            drift.summary.error
+        ));
     }
 
     let allocator_config = NodeAllocatorConfig::from_service_name(PROCESS_SERVICE_NAME);

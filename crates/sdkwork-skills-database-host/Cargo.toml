@@ -17,6 +17,7 @@ path = "src/lib.rs"
 dotenvy = "0.15"
 sqlx.workspace = true
 sdkwork-database-config = { workspace = true }
+sdkwork-database-drift = { workspace = true }
 sdkwork-database-id = { workspace = true }
 sdkwork-database-lifecycle = { workspace = true }
 sdkwork-database-spi = { workspace = true }
