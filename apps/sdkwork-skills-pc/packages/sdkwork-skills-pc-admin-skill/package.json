@@ -15,11 +15,11 @@
   "dependencies": {
     "@sdkwork/skills-pc-admin": "workspace:*",
     "@sdkwork/skills-pc-admin-core": "workspace:*",
-    "@sdkwork/skills-pc-core": "workspace:*",
     "@sdkwork/skills-pc-commons": "workspace:*",
+    "@sdkwork/skills-pc-core": "workspace:*",
     "@sdkwork/utils": "workspace:*",
     "react": "^19.1.0",
-    "react-router-dom": "^7.6.0"
+    "react-router-dom": "^7.18.4"
   },
   "sdkwork": {
     "applicationCode": "skills",
