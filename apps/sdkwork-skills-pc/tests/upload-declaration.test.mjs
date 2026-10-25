@@ -16,7 +16,7 @@ import { fileURLToPath } from 'node:url';
 
 const appRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const DECLARATION_PATH = path.join(appRoot, 'specs/upload.declaration.json');
-const APP_CONFIG_PATH = path.join(appRoot, 'sdkwork.app.config.json');
+const APP_CONFIG_PATH = path.join(appRoot, 'agent.app.config.json');
 const CONSTANTS_PATH = path.join(
   appRoot,
   'packages/sdkwork-skills-pc-core/src/sdk/uploadDeclaration.ts',
@@ -50,7 +50,7 @@ function loadDeclaration() {
 function loadCanonicalAppId() {
   const config = JSON.parse(fs.readFileSync(APP_CONFIG_PATH, 'utf8'));
   const appId = config.backend?.appId ?? config.app?.key;
-  assert.ok(appId, 'sdkwork.app.config.json does not declare an app identity.');
+  assert.ok(appId, 'agent.app.config.json does not declare an app identity.');
   return appId;
 }
 

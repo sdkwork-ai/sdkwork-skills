@@ -14,7 +14,7 @@ Authority:
 
 | Task | Path |
 | --- | --- |
-| App identity and runtime | `sdkwork.app.config.json` |
+| App identity and runtime | `agent.app.config.json` |
 | PC Hub, Console, and Admin UI | `apps/sdkwork-skills-pc/` |
 | App and backend OpenAPI | `apis/app-api/`, `apis/backend-api/` |
 | Generated SDK families | `sdks/sdkwork-skills-app-sdk/`, `sdks/sdkwork-skills-backend-sdk/` |

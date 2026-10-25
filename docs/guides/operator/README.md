@@ -38,6 +38,6 @@ node ../sdkwork-specs/tools/check-api-response-envelope.mjs --workspace .
 ## Packaging
 
 Release workflow: repository `sdkwork.workflow.json` and `.github/workflows/package.yml`.
-Container image id: `registry.sdkwork.com/apps/sdkwork-skills` (from `sdkwork.app.config.json`).
+Container image id: `registry.sdkwork.com/apps/sdkwork-skills` (from `agent.app.config.json`).
 
 Authority: `DOCUMENTATION_SPEC.md` section 2, `DEPLOYMENT_SPEC.md`, `RELEASE_SPEC.md`.

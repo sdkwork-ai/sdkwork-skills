@@ -1,6 +1,6 @@
 import { isBlank, trim } from '@sdkwork/utils';
 import {resolveBaseUrlWithAlignProtocol} from '@sdkwork/sdk-common';
-import manifest from '../../../../sdkwork.app.config.json';
+import manifest from '../../../../agent.app.config.json';
 
 export type SdkworkSkillsPcEnvironment = 'development' | 'test' | 'staging' | 'production';
 

@@ -17,7 +17,7 @@ The canonical standards entrypoint is `../../../sdkwork-specs/README.md`. This e
 
 This is the React PC application for SDKWork Skills. The parent root owns API contracts, SDK
 generation, Rust services, database lifecycle, and release identity. Read
-`../../sdkwork.app.config.json` when application identity, runtime, SDK wiring, release, packaging,
+`../../agent.app.config.json` when application identity, runtime, SDK wiring, release, packaging,
 or app-owned capabilities are in scope.
 
 ## Local Dictionary Structure
@@ -33,7 +33,7 @@ or app-owned capabilities are in scope.
 
 1. Read this `AGENTS.md`.
 2. Read `../../AGENTS.md` for repository-wide boundaries.
-3. Read `../../sdkwork.app.config.json` only for application identity or runtime composition work.
+3. Read `../../agent.app.config.json` only for application identity or runtime composition work.
 4. Read the nearest package manifest and `specs/` only for the affected package.
 5. Resolve the task row in `../../../sdkwork-specs/README.md` and read only selected specs.
 6. Inspect implementation files.
