@@ -80,7 +80,10 @@ mod tests {
     use axum::body::{to_bytes, Body};
     use axum::http::{Request, StatusCode};
     use sdkwork_iam_web_adapter::IamWebRequestContextResolver;
-    use sdkwork_web_bootstrap::{AlwaysReady, ApiModuleRegistry, READINESS_DEPENDENCY_UNAVAILABLE, ReadinessCheck, ReadinessFuture};
+    use sdkwork_web_bootstrap::{
+        AlwaysReady, ApiModuleRegistry, ReadinessCheck, ReadinessFuture,
+        READINESS_DEPENDENCY_UNAVAILABLE,
+    };
     use sdkwork_web_core::{DomainContextInjector, HttpRouteManifest, WebRequestContext};
     use tower::ServiceExt;
 

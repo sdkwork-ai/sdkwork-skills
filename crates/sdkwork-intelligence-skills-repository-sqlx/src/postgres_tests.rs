@@ -93,10 +93,12 @@ impl PostgresTestContext {
         } = self;
         drop(service);
         pool.close().await;
-        sqlx::query(sqlx::AssertSqlSafe(format!("DROP SCHEMA \"{schema}\" CASCADE")))
-            .execute(&admin_pool)
-            .await
-            .expect("drop isolated Skills PostgreSQL test schema");
+        sqlx::query(sqlx::AssertSqlSafe(format!(
+            "DROP SCHEMA \"{schema}\" CASCADE"
+        )))
+        .execute(&admin_pool)
+        .await
+        .expect("drop isolated Skills PostgreSQL test schema");
         admin_pool.close().await;
     }
 }
