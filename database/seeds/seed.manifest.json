@@ -21,7 +21,7 @@
     "zh-CN": {
       "version": "1.0.0",
       "required": true,
-      "checksum": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "checksum": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
       "files": []
     },
     "en-US": {
@@ -45,8 +45,7 @@
       "common": [
         "common/001_bootstrap.sql",
         "common/001_categories.sql",
-        "common/002_marketplace.sql",
-        "001_bootstrap.sql"
+        "common/002_marketplace.sql"
       ],
       "locales": {
         "zh-CN": []
