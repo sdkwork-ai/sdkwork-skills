@@ -14,7 +14,7 @@ dist/
 .env.test.local
 .env.staging.local
 .env.production.local
-.env.postgres
+config/host/postgres.env
 .env.release.local
 config/*.local.toml
 
@@ -22,7 +22,7 @@ config/*.local.toml
 .runtime/
 **/.runtime/
 !.env.*.example
-!.env.postgres.example
+!config/host/postgres.env.example
 coverage/
 **/.pnpm-store/
 .DS_Store
