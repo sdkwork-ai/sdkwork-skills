@@ -40,6 +40,13 @@ function strictObject(required, properties) {
 const timestamp = { type: "string", format: "date-time" };
 const optionalTimestamp = nullable(timestamp);
 const stringArray = { type: "array", items: { type: "string" }, default: [] };
+const roleCodeArray = {
+  type: "array",
+  items: { type: "string", pattern: "^[a-z][a-z0-9_.-]{0,127}$" },
+  default: [],
+  description:
+    "IAM role codes allowed to see this resource. An empty list means every role (the default).",
+};
 const jsonObject = { type: "object", additionalProperties: true };
 const driveUri = {
   type: "string",
@@ -53,7 +60,7 @@ const domainSchemas = {
     [
       "id", "uuid", "tenantId", "organizationId", "skillKey", "packageId", "name",
       "marketStatus", "visibility", "reviewStatus", "categories", "enabled", "featured",
-      "installCount", "tags", "version", "createdAt", "updatedAt",
+      "installCount", "tags", "allowedRoleCodes", "version", "createdAt", "updatedAt",
     ],
     {
       id: uint64StringProperty(),
@@ -73,6 +80,7 @@ const domainSchemas = {
       featured: { type: "boolean" },
       installCount: uint64StringProperty(),
       tags: stringArray,
+      allowedRoleCodes: roleCodeArray,
       version: uint64StringProperty(),
       createdAt: timestamp,
       updatedAt: timestamp,
@@ -82,8 +90,8 @@ const domainSchemas = {
   SkillPackageRecord: strictObject(
     [
       "id", "uuid", "tenantId", "organizationId", "ownerUserId", "skillKey", "packageKey",
-      "code", "displayName", "categories", "tags", "status", "visibility", "featured",
-      "sortWeight", "version", "createdAt", "updatedAt",
+      "code", "displayName", "categories", "tags", "allowedRoleCodes", "status",
+      "visibility", "featured", "sortWeight", "version", "createdAt", "updatedAt",
     ],
     {
       id: uint64StringProperty(),
@@ -99,6 +107,7 @@ const domainSchemas = {
       description: nullable({ type: "string" }),
       categories: stringArray,
       tags: stringArray,
+      allowedRoleCodes: roleCodeArray,
       status: { type: "string", enum: lifecycleStatus },
       visibility: { type: "string", enum: visibility },
       featured: { type: "boolean" },
@@ -245,6 +254,7 @@ const domainSchemas = {
       description: nullable({ type: "string" }),
       categories: stringArray,
       tags: stringArray,
+      allowedRoleCodes: roleCodeArray,
       status: { type: "string", enum: lifecycleStatus, default: "draft" },
       visibility: { type: "string", enum: visibility, default: "tenant" },
       featured: { type: "boolean", default: false },
@@ -259,6 +269,7 @@ const domainSchemas = {
     description: nullable({ type: "string" }),
     categories: stringArray,
     tags: stringArray,
+    allowedRoleCodes: roleCodeArray,
     status: { type: "string", enum: lifecycleStatus },
     visibility: { type: "string", enum: visibility },
     featured: { type: "boolean" },

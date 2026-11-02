@@ -45,6 +45,11 @@ fn row_to_package(row: &sqlx::postgres::PgRow) -> SkillsResult<SkillPackageRecor
             &row.try_get::<String, _>("tags_json").map_err(map_sqlx)?,
             "tags_json",
         )?,
+        allowed_role_codes: string_list_from_json(
+            &row.try_get::<String, _>("allowed_role_codes")
+                .map_err(map_sqlx)?,
+            "allowed_role_codes",
+        )?,
         status: lifecycle(row.try_get("status").map_err(map_sqlx)?)?,
         visibility: visibility(row.try_get("visibility").map_err(map_sqlx)?)?,
         featured: row.try_get::<i16, _>("featured").map_err(map_sqlx)? != 0,
@@ -90,6 +95,11 @@ fn row_to_skill(row: &sqlx::postgres::PgRow) -> SkillsResult<SkillRecord> {
         tags: string_list_from_json(
             &row.try_get::<String, _>("tags_json").map_err(map_sqlx)?,
             "tags_json",
+        )?,
+        allowed_role_codes: string_list_from_json(
+            &row.try_get::<String, _>("allowed_role_codes")
+                .map_err(map_sqlx)?,
+            "allowed_role_codes",
         )?,
         version: int64_to_uint64(row.try_get("version").map_err(map_sqlx)?, "version")?,
         created_at: timestamp_to_rfc3339(row.try_get("created_at").map_err(map_sqlx)?),
@@ -244,7 +254,8 @@ const PACKAGE_SELECT: &str = r#"
                JOIN skills_category c ON c.id = b.category_id AND c.deleted_at IS NULL
                WHERE b.skill_id = s.id
            ), '[]') AS category_codes_json,
-           p.tags_json, p.status, p.visibility, p.featured, p.sort_weight, p.version,
+           p.tags_json, p.allowed_role_codes, p.status, p.visibility, p.featured,
+           p.sort_weight, p.version,
            p.created_at, p.updated_at, p.deleted_at
     FROM skills_package p
     JOIN skills_definition s ON s.package_id = p.id AND s.deleted_at IS NULL
@@ -260,7 +271,8 @@ const SKILL_SELECT: &str = r#"
                JOIN skills_category c ON c.id = b.category_id AND c.deleted_at IS NULL
                WHERE b.skill_id = s.id
            ), '[]') AS category_codes_json,
-           s.enabled, s.featured, s.install_count, p.tags_json, s.version,
+           s.enabled, s.featured, s.install_count, p.tags_json, p.allowed_role_codes,
+           s.version,
            s.created_at, s.updated_at, s.deleted_at
     FROM skills_definition s
     JOIN skills_package p ON p.id = s.package_id AND p.deleted_at IS NULL
@@ -799,14 +811,15 @@ pub async fn create_skill_package(
 ) -> SkillsResult<SkillPackageRecord> {
     let mut tx = pool.begin().await.map_err(map_sqlx)?;
     let tags_json = string_list_to_json(&record.tags, "tags")?;
+    let allowed_role_codes = string_list_to_json(&record.allowed_role_codes, "allowed_role_codes")?;
     let package_id = next_id(id_generator)?;
     let skill_id = next_id(id_generator)?;
     sqlx::query(
         "INSERT INTO skills_package (
              id, uuid, tenant_id, organization_id, owner_user_id, package_key, code,
-             display_name, summary, description, tags_json, status, visibility,
-             featured, sort_weight, version
-         ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,1)",
+             display_name, summary, description, tags_json, allowed_role_codes, status,
+             visibility, featured, sort_weight, version
+         ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,1)",
     )
     .bind(package_id)
     .bind(new_uuid())
@@ -819,6 +832,7 @@ pub async fn create_skill_package(
     .bind(&record.summary)
     .bind(&record.description)
     .bind(tags_json)
+    .bind(allowed_role_codes)
     .bind(record.status.as_db_code())
     .bind(record.visibility.as_db_code())
     .bind(i16::from(record.featured))
@@ -872,9 +886,11 @@ pub async fn update_skill_package(
 ) -> SkillsResult<SkillPackageRecord> {
     let mut tx = pool.begin().await.map_err(map_sqlx)?;
     let tags_json = string_list_to_json(&record.tags, "tags")?;
+    let allowed_role_codes = string_list_to_json(&record.allowed_role_codes, "allowed_role_codes")?;
     let updated = sqlx::query(
         "UPDATE skills_package SET display_name=$4, summary=$5, description=$6,
-                tags_json=$7, status=$8, visibility=$9, featured=$10, sort_weight=$11,
+                tags_json=$7, allowed_role_codes=$8, status=$9, visibility=$10,
+                featured=$11, sort_weight=$12,
                 version=version+1, updated_at=CURRENT_TIMESTAMP
          WHERE id=$1 AND tenant_id=$2 AND version=$3 AND deleted_at IS NULL",
     )
@@ -885,6 +901,7 @@ pub async fn update_skill_package(
     .bind(&record.summary)
     .bind(&record.description)
     .bind(tags_json)
+    .bind(allowed_role_codes)
     .bind(record.status.as_db_code())
     .bind(record.visibility.as_db_code())
     .bind(i16::from(record.featured))

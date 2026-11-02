@@ -2433,7 +2433,8 @@
           "tags",
           "version",
           "createdAt",
-          "updatedAt"
+          "updatedAt",
+          "allowedRoleCodes"
         ],
         "properties": {
           "id": {
@@ -2549,6 +2550,15 @@
             "type": "string",
             "format": "date-time",
             "nullable": true
+          },
+          "allowedRoleCodes": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_.-]{0,127}$"
+            },
+            "default": [],
+            "description": "IAM role codes allowed to see this resource. An empty list means every role (the default)."
           }
         }
       },
@@ -2573,7 +2583,8 @@
           "sortWeight",
           "version",
           "createdAt",
-          "updatedAt"
+          "updatedAt",
+          "allowedRoleCodes"
         ],
         "properties": {
           "id": {
@@ -2698,6 +2709,15 @@
             "type": "string",
             "format": "date-time",
             "nullable": true
+          },
+          "allowedRoleCodes": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_.-]{0,127}$"
+            },
+            "default": [],
+            "description": "IAM role codes allowed to see this resource. An empty list means every role (the default)."
           }
         }
       },
@@ -3218,6 +3238,15 @@
           },
           "initialArtifact": {
             "$ref": "#/components/schemas/CreateSkillArtifactCommand"
+          },
+          "allowedRoleCodes": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_.-]{0,127}$"
+            },
+            "default": [],
+            "description": "IAM role codes allowed to see this resource. An empty list means every role (the default)."
           }
         }
       },
@@ -3288,6 +3317,15 @@
           "sortWeight": {
             "type": "integer",
             "format": "int32"
+          },
+          "allowedRoleCodes": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_.-]{0,127}$"
+            },
+            "default": [],
+            "description": "IAM role codes allowed to see this resource. An empty list means every role (the default)."
           }
         }
       },

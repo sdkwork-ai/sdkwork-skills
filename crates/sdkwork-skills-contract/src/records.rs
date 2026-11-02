@@ -55,6 +55,9 @@ pub struct SkillPackageRecord {
     pub description: Option<String>,
     pub categories: Vec<String>,
     pub tags: Vec<String>,
+    /// IAM role codes allowed to see this package. An empty list means every
+    /// role, which is the default for existing and newly created packages.
+    pub allowed_role_codes: Vec<String>,
     pub status: SkillLifecycleStatus,
     pub visibility: SkillVisibility,
     pub featured: bool,
@@ -91,6 +94,9 @@ pub struct SkillRecord {
     #[serde(with = "sdkwork_utils_rust::serde_uint64")]
     pub install_count: u64,
     pub tags: Vec<String>,
+    /// IAM role codes allowed to see and install this skill. An empty list
+    /// means every role.
+    pub allowed_role_codes: Vec<String>,
     #[serde(with = "sdkwork_utils_rust::serde_uint64")]
     pub version: u64,
     pub created_at: String,
@@ -173,4 +179,17 @@ pub struct SkillInstallationRecord {
     pub version: u64,
     pub installed_at: String,
     pub updated_at: String,
+}
+
+/// Canonical role-assignment list: trimmed, empty entries dropped,
+/// de-duplicated and sorted, so an unchanged selection never bumps a row.
+pub fn normalize_allowed_role_codes(values: &[String]) -> Vec<String> {
+    let mut codes = values
+        .iter()
+        .map(|value| value.trim().to_string())
+        .filter(|value| !value.is_empty())
+        .collect::<Vec<_>>();
+    codes.sort();
+    codes.dedup();
+    codes
 }

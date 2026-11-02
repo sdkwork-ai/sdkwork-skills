@@ -30,6 +30,21 @@ The database enforces that the artifact belongs to the package. Categories and
 capabilities use binding tables; there are no JSON authority lists, shadow
 tables, synchronized copies, or latest-version projections.
 
+`skills_package.allowed_role_codes` is the only role-assignment list: a JSON
+array of IAM role codes allowed to see and install the package. An empty array
+is the default and means every role. It is authored through the backend package
+management API and never through the self-service package path.
+
+## Role assignment
+
+| Column | Default | Meaning |
+| --- | --- | --- |
+| `skills_package.allowed_role_codes` | `[]` | IAM role codes allowed to see the package; `[]` = every role |
+
+Role codes follow `^[a-z][a-z0-9_.-]{0,127}$` and are stored normalized
+(trimmed, de-duplicated, sorted) by the application. A GIN index serves future
+role-membership filtering without a table scan.
+
 Artifact lifecycle timestamps form a database-checked state machine: drafts
 have no publication timestamps, published artifacts have `published_at`, and
 yanked artifacts have ordered `published_at` and `yanked_at` values. Every

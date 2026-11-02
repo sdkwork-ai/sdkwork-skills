@@ -141,6 +141,9 @@ pub struct CreateSkillPackageCommand {
     pub categories: Vec<String>,
     #[serde(default)]
     pub tags: Vec<String>,
+    /// IAM role codes allowed to see the package; empty means every role.
+    #[serde(default)]
+    pub allowed_role_codes: Vec<String>,
     #[serde(default)]
     pub status: Option<SkillLifecycleStatus>,
     #[serde(default)]
@@ -177,6 +180,9 @@ pub struct UpdateSkillPackageCommand {
     pub categories: Option<Vec<String>>,
     #[serde(default)]
     pub tags: Option<Vec<String>>,
+    /// Full replacement list; omitted leaves the assignment unchanged.
+    #[serde(default)]
+    pub allowed_role_codes: Option<Vec<String>>,
     #[serde(default)]
     pub status: Option<SkillLifecycleStatus>,
     #[serde(default)]

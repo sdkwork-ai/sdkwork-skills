@@ -16,6 +16,8 @@ export interface SkillRecord {
   featured: boolean;
   installCount: string;
   tags: string[];
+  /** IAM role codes allowed to see this resource. An empty list means every role (the default). */
+  allowedRoleCodes: string[];
   version: string;
   createdAt: string;
   updatedAt: string;

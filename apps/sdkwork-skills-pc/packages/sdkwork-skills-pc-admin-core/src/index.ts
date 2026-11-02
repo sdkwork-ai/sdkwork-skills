@@ -10,6 +10,14 @@ export {
 export type { SkillCapabilityRecord } from '@sdkwork/skills-backend-sdk';
 
 export {
+  SKILLS_ASSIGNABLE_ROLES,
+  describeAllowedRoleCodes,
+  isSkillVisibleToRoles,
+  normalizeAllowedRoleCodes,
+  type SkillsAssignableRole,
+} from './roleAssignment';
+
+export {
   createSkillsBackendClients,
   type SkillsBackendClients,
   type SkillsBackendClientConfig,

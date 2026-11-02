@@ -189,6 +189,7 @@ fn package(tenant_id: u64, suffix: &str) -> SkillPackageRecord {
         description: Some("A normalized Skills marketplace package".to_string()),
         categories: vec!["coding".to_string()],
         tags: vec!["automation".to_string(), "coding".to_string()],
+        allowed_role_codes: Vec::new(),
         status: SkillLifecycleStatus::Active,
         visibility: SkillVisibility::Public,
         featured: true,

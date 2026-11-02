@@ -13,8 +13,10 @@ import {
   createSkillCategory,
   createSkillPackage,
   deleteSkillPackage,
+  describeAllowedRoleCodes,
   listManagedSkillCategories,
   listManagedSkillPackages,
+  normalizeAllowedRoleCodes,
   packageManagePermissionForCategory,
   updateSkillCategory,
   updateSkillPackage,
@@ -22,6 +24,7 @@ import {
 
 import { uploadSkillPackageArchive } from './services/skillPackageUploadService';
 import { ConfirmModal, SurfaceDrawer } from './components/SurfaceOverlay.tsx';
+import { RoleMultiSelect } from './components/RoleMultiSelect.tsx';
 
 export function AdminSkillsPage({
   grantedPermissions = [],
@@ -51,6 +54,7 @@ export function AdminSkillsPage({
     summary: 'Skill package uploaded through sdkwork-drive',
     categories: [],
     tags: ['demo'],
+    allowedRoleCodes: [],
     status: 'active',
     visibility: 'tenant',
     initialArtifact: {
@@ -187,6 +191,7 @@ export function AdminSkillsPage({
                   <th>Name</th>
                   <th>Skill key</th>
                   <th>Categories</th>
+                  <th>Roles</th>
                   <th>Actions</th>
                 </tr>
               </thead>
@@ -196,6 +201,7 @@ export function AdminSkillsPage({
                     <td>{item.displayName}</td>
                     <td>{item.skillKey}</td>
                     <td>{item.categories.length > 0 ? item.categories.join(', ') : '—'}</td>
+                    <td>{describeAllowedRoleCodes(item.allowedRoleCodes)}</td>
                     <td>
                       <div className="skills-console-actions">
                         <button type="button" onClick={() => setEditTarget(item)}>
@@ -268,6 +274,10 @@ export function AdminSkillsPage({
             </label>
           ))}
         </fieldset>
+        <RoleMultiSelect
+          value={form.allowedRoleCodes ?? []}
+          onChange={(allowedRoleCodes) => setForm({ ...form, allowedRoleCodes })}
+        />
         <div style={{ display: 'grid', gap: 8 }}>
           <input ref={fileInputRef} type="file" accept=".zip,.tar,.gz,.tgz,.skillpkg,application/zip" />
           <button type="button" onClick={onUploadSelectedFile} disabled={uploading}>
@@ -307,6 +317,7 @@ export function AdminSkillsPage({
                 ...(current.description ? { description: current.description } : {}),
                 ...(current.categories.length > 0 ? { categories: current.categories } : {}),
                 ...(current.tags.length > 0 ? { tags: current.tags } : {}),
+                allowedRoleCodes: normalizeAllowedRoleCodes(current.allowedRoleCodes ?? []),
               })
                 .then(async () => {
                   setEditTarget(null);
@@ -334,6 +345,10 @@ export function AdminSkillsPage({
               onChange={(event) => setEditTarget({ ...editTarget, description: event.target.value || null })}
               placeholder="description"
               rows={4}
+            />
+            <RoleMultiSelect
+              value={editTarget.allowedRoleCodes ?? []}
+              onChange={(allowedRoleCodes) => setEditTarget({ ...editTarget, allowedRoleCodes })}
             />
             <div className="sdkwork-surface-drawer-form-actions">
               <button type="button" onClick={() => setEditTarget(null)}>Cancel</button>

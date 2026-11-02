@@ -47,6 +47,7 @@ fn package() -> SkillPackageRecord {
         description: None,
         categories: Vec::new(),
         tags: Vec::new(),
+        allowed_role_codes: Vec::new(),
         status: SkillLifecycleStatus::Active,
         visibility: SkillVisibility::Tenant,
         featured: false,
@@ -92,4 +93,20 @@ fn installation_subjects_use_iam_and_agents_authorities() {
     }
     assert!(validate_installation_subject("workspace", 1).is_err());
     assert!(validate_installation_subject("project", 0).is_err());
+}
+
+#[test]
+fn validates_allowed_role_codes() {
+    let mut record = package();
+    record.allowed_role_codes = vec![
+        "org_admin".to_string(),
+        "skills_marketplace_user".to_string(),
+    ];
+    validate_skill_package_record(&record).expect("canonical role codes");
+
+    record.allowed_role_codes = vec!["Org Admin".to_string()];
+    assert!(validate_skill_package_record(&record).is_err());
+
+    record.allowed_role_codes = (0..65).map(|index| format!("role_{index}")).collect();
+    assert!(validate_skill_package_record(&record).is_err());
 }

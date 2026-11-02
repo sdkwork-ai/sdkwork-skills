@@ -46,6 +46,7 @@ CREATE TABLE IF NOT EXISTS skills_package (
     summary TEXT,
     description TEXT,
     tags_json TEXT NOT NULL DEFAULT '[]',
+    allowed_role_codes TEXT NOT NULL DEFAULT '[]',
     status SMALLINT NOT NULL DEFAULT 0,
     visibility SMALLINT NOT NULL DEFAULT 0,
     featured SMALLINT NOT NULL DEFAULT 0,
@@ -56,6 +57,7 @@ CREATE TABLE IF NOT EXISTS skills_package (
     deleted_at TIMESTAMPTZ,
     CONSTRAINT uk_skills_package_uuid UNIQUE (uuid),
     CONSTRAINT ck_skills_package_tags CHECK (jsonb_typeof(tags_json::jsonb) = 'array'),
+    CONSTRAINT ck_skills_package_allowed_roles CHECK (jsonb_typeof(allowed_role_codes::jsonb) = 'array'),
     CONSTRAINT ck_skills_package_status CHECK (status IN (0, 1, 2, 3, 4)),
     CONSTRAINT ck_skills_package_visibility CHECK (visibility IN (0, 1, 2, 3)),
     CONSTRAINT ck_skills_package_featured CHECK (featured IN (0, 1)),
@@ -72,6 +74,9 @@ CREATE UNIQUE INDEX IF NOT EXISTS uk_skills_package_tenant_id
     ON skills_package (tenant_id, id);
 CREATE INDEX IF NOT EXISTS idx_skills_package_market
     ON skills_package (tenant_id, visibility, status, featured, sort_weight, updated_at DESC)
+    WHERE deleted_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_skills_package_allowed_roles
+    ON skills_package USING GIN ((allowed_role_codes::jsonb))
     WHERE deleted_at IS NULL;
 
 CREATE TABLE IF NOT EXISTS skills_definition (

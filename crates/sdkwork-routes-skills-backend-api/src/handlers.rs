@@ -16,7 +16,7 @@ use sdkwork_routes_skills_common::{
     SdkWorkListQuery, SkillCategoryListQuery, UpdateSkillCapabilityCommand,
     UpdateSkillCategoryCommand, UpdateSkillPackageCommand,
 };
-use sdkwork_skills_contract::SkillCategoryType;
+use sdkwork_skills_contract::{normalize_allowed_role_codes, SkillCategoryType};
 use sdkwork_web_core::WebRequestContext;
 
 use crate::mapper::{artifact_record, capability_record, category_record, package_aggregate};
@@ -166,6 +166,9 @@ where
             }
             if let Some(value) = body.tags {
                 record.tags = value;
+            }
+            if let Some(value) = body.allowed_role_codes {
+                record.allowed_role_codes = normalize_allowed_role_codes(&value);
             }
             if let Some(value) = body.status {
                 record.status = value;

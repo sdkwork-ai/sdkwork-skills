@@ -24,6 +24,10 @@ fn sha256_pattern() -> Regex {
     Regex::new(r"^[0-9a-f]{64}$").expect("valid sha256 regex")
 }
 
+fn role_code_pattern() -> Regex {
+    Regex::new(r"^[a-z][a-z0-9_.-]{0,127}$").expect("valid IAM role code regex")
+}
+
 pub fn validate_skill_key(value: &str) -> SkillsResult<()> {
     let value = trim(value);
     if !skill_key_pattern().is_match(&value) {
@@ -99,6 +103,16 @@ pub fn validate_skill_package_record(record: &SkillPackageRecord) -> SkillsResul
     }
     if record.tags.len() > 64 {
         return Err(invalid("tags cannot contain more than 64 entries"));
+    }
+    if record.allowed_role_codes.len() > 64 {
+        return Err(invalid(
+            "allowed_role_codes cannot contain more than 64 entries",
+        ));
+    }
+    for code in &record.allowed_role_codes {
+        if !role_code_pattern().is_match(&trim(code)) {
+            return Err(invalid(format!("invalid allowed role code: {code}")));
+        }
     }
     Ok(())
 }

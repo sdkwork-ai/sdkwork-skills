@@ -1,6 +1,6 @@
 use sdkwork_skills_contract::{
-    SkillArtifactRecord, SkillArtifactStatus, SkillLifecycleStatus, SkillPackageRecord,
-    SkillVisibility,
+    normalize_allowed_role_codes, SkillArtifactRecord, SkillArtifactStatus, SkillLifecycleStatus,
+    SkillPackageRecord, SkillVisibility,
 };
 
 use crate::commands::{CreateSkillArtifactCommand, CreateSkillPackageCommand};
@@ -57,6 +57,7 @@ pub fn package_aggregate(
         description: command.description,
         categories: command.categories,
         tags: command.tags,
+        allowed_role_codes: normalize_allowed_role_codes(&command.allowed_role_codes),
         status: command.status.unwrap_or(SkillLifecycleStatus::Draft),
         visibility: command.visibility.unwrap_or(SkillVisibility::Tenant),
         featured: command.featured,
@@ -97,6 +98,10 @@ pub fn self_service_package_aggregate(
         description: command.description,
         categories: command.categories,
         tags: command.tags,
+        // Role assignment is an administrator decision: self-service packages
+        // start visible to every role and are narrowed through the backend
+        // package-management surface.
+        allowed_role_codes: Vec::new(),
         status: SkillLifecycleStatus::Active,
         visibility: SkillVisibility::Tenant,
         featured: false,
