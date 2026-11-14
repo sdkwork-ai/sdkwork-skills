@@ -29,33 +29,43 @@ export function RoleMultiSelect({
   return (
     <fieldset
       disabled={disabled}
-      style={{ display: 'grid', gap: 6, border: '1px solid #ddd', padding: 12 }}
+      className="rounded-lg border border-zinc-700 bg-zinc-800/40 p-3"
     >
-      <legend>Visible to roles</legend>
-      <label style={{ display: 'flex', gap: 8, alignItems: 'center', fontWeight: 600 }}>
-        <input type="checkbox" checked={allRoles} onChange={() => onChange([])} />
-        <span>All roles (default)</span>
-      </label>
-      {roles.map((role) => (
-        <label key={role.code} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+      <legend className="px-1 text-xs font-medium uppercase tracking-wide text-zinc-400">
+        Visible to roles
+      </legend>
+      <div className="grid gap-1.5">
+        <label className="flex items-center gap-2 text-sm font-medium text-zinc-200">
           <input
             type="checkbox"
-            checked={selected.has(role.code)}
-            onChange={(event) => {
-              const next = new Set(value);
-              if (event.target.checked) {
-                next.add(role.code);
-              } else {
-                next.delete(role.code);
-              }
-              onChange([...next]);
-            }}
+            checked={allRoles}
+            onChange={() => onChange([])}
+            className="size-4 rounded border-zinc-600 bg-zinc-800"
           />
-          <span>
-            {role.label} (<code>{role.code}</code>)
-          </span>
+          <span>All roles (default)</span>
         </label>
-      ))}
+        {roles.map((role) => (
+          <label key={role.code} className="flex items-center gap-2 text-sm text-zinc-300">
+            <input
+              type="checkbox"
+              checked={selected.has(role.code)}
+              onChange={(event) => {
+                const next = new Set(value);
+                if (event.target.checked) {
+                  next.add(role.code);
+                } else {
+                  next.delete(role.code);
+                }
+                onChange([...next]);
+              }}
+              className="size-4 rounded border-zinc-600 bg-zinc-800"
+            />
+            <span>
+              {role.label} (<code className="font-mono text-xs text-zinc-400">{role.code}</code>)
+            </span>
+          </label>
+        ))}
+      </div>
     </fieldset>
   );
 }

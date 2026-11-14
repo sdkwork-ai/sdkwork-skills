@@ -11,8 +11,12 @@ export interface SurfaceDrawerProps {
 }
 
 /**
- * Right-side operation drawer for list CRUD. Host styles target
- * `.sdkwork-surface-drawer-*` inside skills/mcp console surfaces.
+ * Right-side operation drawer for list CRUD.
+ *
+ * Host styles target `.sdkwork-surface-drawer-*` inside skills/mcp console
+ * surfaces; when the composing host does not define them (the Cloud Router
+ * admin, for example), the embedded Tailwind utilities render the drawer with
+ * the same professional dark surface used by the federated admin pages.
  */
 export function SurfaceDrawer({
   open,
@@ -25,35 +29,44 @@ export function SurfaceDrawer({
 }: SurfaceDrawerProps) {
   if (!open) return null;
   return (
-    <div className="sdkwork-surface-drawer-root" role="presentation">
+    <div
+      className="sdkwork-surface-drawer-root fixed inset-0 z-50 flex justify-end bg-black/60 backdrop-blur-[2px]"
+      role="presentation"
+    >
       <button
         type="button"
-        className="sdkwork-surface-drawer-backdrop"
+        className="sdkwork-surface-drawer-backdrop absolute inset-0 cursor-default"
         aria-label="Close"
         onClick={onClose}
       />
       <aside
-        className={`sdkwork-surface-drawer-panel sdkwork-surface-drawer-panel--${size}`}
+        className={`sdkwork-surface-drawer-panel sdkwork-surface-drawer-panel--${size} relative flex h-full w-full flex-col border-l border-zinc-800 bg-zinc-900 shadow-2xl ${
+          size === 'lg' ? 'max-w-2xl' : 'max-w-lg'
+        }`}
         role="dialog"
         aria-modal="true"
         aria-labelledby="sdkwork-surface-drawer-title"
       >
-        <header className="sdkwork-surface-drawer-header">
+        <header className="sdkwork-surface-drawer-header flex items-start justify-between gap-4 border-b border-zinc-800 px-5 py-4">
           <div>
-            <h3 id="sdkwork-surface-drawer-title">{title}</h3>
-            {description ? <p>{description}</p> : null}
+            <h3 id="sdkwork-surface-drawer-title" className="text-base font-semibold text-zinc-100">
+              {title}
+            </h3>
+            {description ? <p className="mt-1 text-sm text-zinc-400">{description}</p> : null}
           </div>
           <button
             type="button"
-            className="sdkwork-surface-drawer-close"
+            className="sdkwork-surface-drawer-close rounded p-1 text-lg leading-none text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200"
             onClick={onClose}
             aria-label="Close"
           >
             ×
           </button>
         </header>
-        <div className="sdkwork-surface-drawer-body">{children}</div>
-        {footer ? <footer className="sdkwork-surface-drawer-footer">{footer}</footer> : null}
+        <div className="sdkwork-surface-drawer-body flex-1 overflow-y-auto px-5 py-4">{children}</div>
+        {footer ? (
+          <footer className="sdkwork-surface-drawer-footer border-t border-zinc-800 px-5 py-3">{footer}</footer>
+        ) : null}
       </aside>
     </div>
   );
@@ -84,33 +97,45 @@ export function ConfirmModal({
 }: ConfirmModalProps) {
   if (!open) return null;
   return (
-    <div className="sdkwork-surface-modal-root" role="presentation">
+    <div
+      className="sdkwork-surface-modal-root fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-[2px]"
+      role="presentation"
+    >
       <button
         type="button"
-        className="sdkwork-surface-drawer-backdrop"
+        className="sdkwork-surface-drawer-backdrop absolute inset-0 cursor-default"
         aria-label="Close"
         onClick={onCancel}
         disabled={busy}
       />
       <div
-        className="sdkwork-surface-modal-panel"
+        className="sdkwork-surface-modal-panel relative w-full max-w-md rounded-lg border border-zinc-800 bg-zinc-900 p-5 shadow-2xl"
         role="alertdialog"
         aria-modal="true"
         aria-labelledby="sdkwork-surface-modal-title"
         aria-describedby="sdkwork-surface-modal-description"
       >
-        <h3 id="sdkwork-surface-modal-title">{title}</h3>
-        <p id="sdkwork-surface-modal-description">{description}</p>
-        <div className="sdkwork-surface-modal-actions">
-          <button type="button" className="sdkwork-surface-modal-cancel" onClick={onCancel} disabled={busy}>
+        <h3 id="sdkwork-surface-modal-title" className="text-base font-semibold text-zinc-100">
+          {title}
+        </h3>
+        <p id="sdkwork-surface-modal-description" className="mt-2 text-sm text-zinc-400">
+          {description}
+        </p>
+        <div className="sdkwork-surface-modal-actions mt-4 flex justify-end gap-2">
+          <button
+            type="button"
+            className="sdkwork-surface-modal-cancel rounded-md border border-zinc-700 px-3 py-1.5 text-sm text-zinc-200 hover:bg-zinc-800 disabled:opacity-60"
+            onClick={onCancel}
+            disabled={busy}
+          >
             {cancelLabel}
           </button>
           <button
             type="button"
             className={
               tone === 'danger'
-                ? 'sdkwork-surface-modal-confirm sdkwork-surface-modal-confirm--danger'
-                : 'sdkwork-surface-modal-confirm'
+                ? 'sdkwork-surface-modal-confirm sdkwork-surface-modal-confirm--danger rounded-md bg-red-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-red-500 disabled:opacity-60'
+                : 'sdkwork-surface-modal-confirm rounded-md bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-500 disabled:opacity-60'
             }
             onClick={onConfirm}
             disabled={busy}

@@ -26,6 +26,23 @@ import { uploadSkillPackageArchive } from './services/skillPackageUploadService'
 import { ConfirmModal, SurfaceDrawer } from './components/SurfaceOverlay.tsx';
 import { RoleMultiSelect } from './components/RoleMultiSelect.tsx';
 
+const INPUT_CLASS =
+  'w-full rounded-md border border-zinc-700 bg-zinc-800/60 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-60';
+const LABEL_CLASS = 'grid gap-1.5 text-sm';
+const LABEL_TEXT_CLASS = 'text-xs font-medium text-zinc-400';
+const SECONDARY_BUTTON_CLASS =
+  'rounded-md border border-zinc-700 bg-zinc-800/60 px-3 py-1.5 text-sm text-zinc-200 hover:bg-zinc-700/60 disabled:opacity-60';
+
+function Field({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
+  return (
+    <label className={LABEL_CLASS}>
+      <span className={LABEL_TEXT_CLASS}>{label}</span>
+      {children}
+      {hint ? <span className="text-xs text-zinc-500">{hint}</span> : null}
+    </label>
+  );
+}
+
 export function AdminSkillsPage({
   grantedPermissions = [],
   roleCodes = [],
@@ -167,138 +184,231 @@ export function AdminSkillsPage({
   }
 
   return (
-    <section className="skills-console-page">
-      <header className="skills-console-header" style={{ marginBottom: 0 }}>
-        <h2>Admin Skills</h2>
-        <button type="button" className="skills-console-primary" onClick={() => setCreateOpen(true)}>
+    <section className="flex flex-col gap-4 p-6">
+      <header className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 className="text-lg font-semibold text-zinc-100">Admin Skills</h2>
+          <p className="mt-0.5 text-sm text-zinc-400">
+            Curate the Skill package catalog — create packages, bind categories, and manage role visibility.
+          </p>
+        </div>
+        <button
+          type="button"
+          className="rounded-md bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-500"
+          onClick={() => setCreateOpen(true)}
+        >
           Create package
         </button>
       </header>
-      {error ? <p role="alert">{error}</p> : null}
-      <div className="data-surface">
-        <div className="table-frame">
-          {packages.length === 0 ? (
-            <div className="empty-state">
-              <span>No skill packages yet.</span>
-              <button type="button" className="skills-console-primary" onClick={() => setCreateOpen(true)}>
-                Create package
-              </button>
-            </div>
-          ) : (
-            <table>
-              <thead>
-                <tr>
-                  <th>Name</th>
-                  <th>Skill key</th>
-                  <th>Categories</th>
-                  <th>Roles</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {packages.map((item) => (
-                  <tr key={item.id}>
-                    <td>{item.displayName}</td>
-                    <td>{item.skillKey}</td>
-                    <td>{item.categories.length > 0 ? item.categories.join(', ') : '—'}</td>
-                    <td>{describeAllowedRoleCodes(item.allowedRoleCodes)}</td>
-                    <td>
-                      <div className="skills-console-actions">
-                        <button type="button" onClick={() => setEditTarget(item)}>
-                          Edit
-                        </button>
-                        <button type="button" onClick={() => setDeleteTarget(item)}>
-                          Delete
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
+
+      {error ? (
+        <div
+          role="alert"
+          className="rounded-md border border-red-800 bg-red-950/50 px-3 py-2 text-sm text-red-400"
+        >
+          {error}
         </div>
+      ) : null}
+
+      <div className="overflow-hidden rounded-lg border border-zinc-800 bg-zinc-900/60">
+        {packages.length === 0 ? (
+          <div className="flex flex-col items-center gap-3 px-6 py-10 text-center">
+            <p className="text-sm text-zinc-400">No skill packages yet.</p>
+            <button
+              type="button"
+              className="rounded-md bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-500"
+              onClick={() => setCreateOpen(true)}
+            >
+              Create package
+            </button>
+          </div>
+        ) : (
+          <table className="w-full text-left text-sm">
+            <thead className="bg-zinc-800/60 text-xs uppercase tracking-wide text-zinc-400">
+              <tr>
+                <th className="px-3 py-2.5 font-medium">Name</th>
+                <th className="px-3 py-2.5 font-medium">Skill key</th>
+                <th className="px-3 py-2.5 font-medium">Categories</th>
+                <th className="px-3 py-2.5 font-medium">Roles</th>
+                <th className="px-3 py-2.5 font-medium">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {packages.map((item) => (
+                <tr
+                  key={item.id}
+                  className="border-t border-zinc-800 align-top hover:bg-zinc-800/40"
+                >
+                  <td className="px-3 py-2.5 font-medium text-zinc-100">{item.displayName}</td>
+                  <td className="px-3 py-2.5">
+                    <code className="font-mono text-xs text-zinc-300">{item.skillKey}</code>
+                  </td>
+                  <td className="max-w-52 px-3 py-2.5">
+                    {item.categories.length > 0 ? (
+                      <div className="flex flex-wrap gap-1">
+                        {item.categories.map((code) => (
+                          <span
+                            key={code}
+                            className="rounded-full bg-blue-500/15 px-2 py-0.5 text-xs font-medium text-blue-300"
+                          >
+                            {code}
+                          </span>
+                        ))}
+                      </div>
+                    ) : (
+                      <span className="text-zinc-500">—</span>
+                    )}
+                  </td>
+                  <td className="px-3 py-2.5 text-zinc-400">
+                    {describeAllowedRoleCodes(item.allowedRoleCodes)}
+                  </td>
+                  <td className="px-3 py-2.5">
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        className={SECONDARY_BUTTON_CLASS}
+                        onClick={() => setEditTarget(item)}
+                      >
+                        Edit
+                      </button>
+                      <button
+                        type="button"
+                        className="rounded-md border border-red-900/60 bg-red-950/40 px-3 py-1.5 text-sm text-red-400 hover:bg-red-900/40"
+                        onClick={() => setDeleteTarget(item)}
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
+
       <SurfaceDrawer
         open={createOpen}
         title="Create package and artifact"
+        description="Uploads the Skill archive through sdkwork-drive, then registers the package."
         onClose={() => setCreateOpen(false)}
       >
-      <form onSubmit={onSubmit} style={{ display: 'grid', gap: 8 }}>
-        <input
-          value={form.skillKey}
-          onChange={(event) => setForm({ ...form, skillKey: event.target.value })}
-          placeholder="skill key"
-          required
-        />
-        <input
-          value={form.displayName}
-          onChange={(event) => setForm({ ...form, displayName: event.target.value })}
-          placeholder="display name"
-          required
-        />
-        <input
-          value={form.initialArtifact.versionLabel}
-          onChange={(event) =>
-            setForm({
-              ...form,
-              initialArtifact: {
-                ...form.initialArtifact,
-                versionLabel: event.target.value,
-              },
-            })
-          }
-          placeholder="artifact version"
-          required
-        />
-        <fieldset style={{ display: 'grid', gap: 8, border: '1px solid #ddd', padding: 12 }}>
-          <legend>Categories</legend>
-          {categories.map((category) => (
-            <label key={category.id} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-              <input
-                type="checkbox"
-                checked={(form.categories ?? []).includes(category.code)}
-                onChange={(event) => {
-                  const current = new Set(form.categories ?? []);
-                  if (event.target.checked) {
-                    current.add(category.code);
-                  } else {
-                    current.delete(category.code);
-                  }
-                  setForm({ ...form, categories: [...current] });
-                }}
-              />
-              <span>
-                {category.name} ({category.code}) - {category.permissionCode}
-              </span>
-            </label>
-          ))}
-        </fieldset>
-        <RoleMultiSelect
-          value={form.allowedRoleCodes ?? []}
-          onChange={(allowedRoleCodes) => setForm({ ...form, allowedRoleCodes })}
-        />
-        <div style={{ display: 'grid', gap: 8 }}>
-          <input ref={fileInputRef} type="file" accept=".zip,.tar,.gz,.tgz,.skillpkg,application/zip" />
-          <button type="button" onClick={onUploadSelectedFile} disabled={uploading}>
-            {uploading ? 'Uploading...' : 'Upload Artifact via sdkwork-drive'}
-          </button>
-          {selectedFileName ? <p>Uploaded file: {selectedFileName}</p> : null}
-          <input
-            value={form.initialArtifact.artifactRef}
-            readOnly
-            placeholder="artifactRef (drive://spaces/.../nodes/...)"
-            required
+        <form onSubmit={onSubmit} className="grid gap-4">
+          <Field label="Skill key">
+            <input
+              className={INPUT_CLASS}
+              value={form.skillKey}
+              onChange={(event) => setForm({ ...form, skillKey: event.target.value })}
+              placeholder="skill.demo.sample"
+              required
+            />
+          </Field>
+          <Field label="Display name">
+            <input
+              className={INPUT_CLASS}
+              value={form.displayName}
+              onChange={(event) => setForm({ ...form, displayName: event.target.value })}
+              placeholder="Demo Sample Skill"
+              required
+            />
+          </Field>
+          <fieldset className="rounded-lg border border-zinc-700 bg-zinc-800/40 p-3">
+            <legend className="px-1 text-xs font-medium uppercase tracking-wide text-zinc-400">
+              Categories
+            </legend>
+            <div className="grid gap-1.5">
+              {categories.map((category) => (
+                <label
+                  key={category.id}
+                  className="flex items-start gap-2 text-sm text-zinc-300"
+                >
+                  <input
+                    type="checkbox"
+                    checked={(form.categories ?? []).includes(category.code)}
+                    onChange={(event) => {
+                      const current = new Set(form.categories ?? []);
+                      if (event.target.checked) {
+                        current.add(category.code);
+                      } else {
+                        current.delete(category.code);
+                      }
+                      setForm({ ...form, categories: [...current] });
+                    }}
+                    className="mt-0.5 size-4 rounded border-zinc-600 bg-zinc-800"
+                  />
+                  <span>
+                    {category.name}
+                    <span className="ml-1 font-mono text-xs text-zinc-500">({category.code})</span>
+                    <span className="block text-xs text-zinc-500">{category.permissionCode}</span>
+                  </span>
+                </label>
+              ))}
+            </div>
+          </fieldset>
+          <RoleMultiSelect
+            value={form.allowedRoleCodes ?? []}
+            onChange={(allowedRoleCodes) => setForm({ ...form, allowedRoleCodes })}
           />
-        </div>
-        <button
-          type="submit"
-          disabled={isBlank(trim(form.initialArtifact.artifactRef)) || uploading}
-        >
-          Create Package And Artifact
-        </button>
-      </form>
+          <fieldset className="rounded-lg border border-zinc-700 bg-zinc-800/40 p-3">
+            <legend className="px-1 text-xs font-medium uppercase tracking-wide text-zinc-400">
+              Artifact (via sdkwork-drive)
+            </legend>
+            <div className="grid gap-2">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".zip,.tar,.gz,.tgz,.skillpkg,application/zip"
+                className="block w-full text-sm text-zinc-300 file:mr-3 file:rounded-md file:border-0 file:bg-zinc-700 file:px-3 file:py-1.5 file:text-sm file:text-zinc-200 hover:file:bg-zinc-600"
+              />
+              <button
+                type="button"
+                className={SECONDARY_BUTTON_CLASS}
+                onClick={onUploadSelectedFile}
+                disabled={uploading}
+              >
+                {uploading ? 'Uploading…' : 'Upload artifact'}
+              </button>
+              {selectedFileName ? (
+                <p className="text-xs text-emerald-400">Uploaded: {selectedFileName}</p>
+              ) : null}
+              <input
+                className={`${INPUT_CLASS} font-mono text-xs`}
+                value={form.initialArtifact.artifactRef}
+                readOnly
+                placeholder="artifactRef (drive://spaces/.../nodes/...)"
+                required
+              />
+            </div>
+          </fieldset>
+          <div className="flex items-center justify-between gap-3">
+            <Field label="Artifact version">
+              <input
+                className={`${INPUT_CLASS} w-40`}
+                value={form.initialArtifact.versionLabel}
+                onChange={(event) =>
+                  setForm({
+                    ...form,
+                    initialArtifact: {
+                      ...form.initialArtifact,
+                      versionLabel: event.target.value,
+                    },
+                  })
+                }
+                placeholder="1.0.0"
+                required
+              />
+            </Field>
+            <button
+              type="submit"
+              className="self-end rounded-md bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-500 disabled:opacity-60"
+              disabled={isBlank(trim(form.initialArtifact.artifactRef)) || uploading}
+            >
+              Create package and artifact
+            </button>
+          </div>
+        </form>
       </SurfaceDrawer>
+
       <SurfaceDrawer
         open={editTarget != null}
         title={editTarget ? `Update ${editTarget.skillKey}` : 'Update package'}
@@ -327,36 +437,53 @@ export function AdminSkillsPage({
                   setError(cause instanceof Error ? cause.message : String(cause));
                 });
             }}
-            style={{ display: 'grid', gap: 8 }}
+            className="grid gap-4"
           >
-            <input
-              value={editTarget.displayName}
-              onChange={(event) => setEditTarget({ ...editTarget, displayName: event.target.value })}
-              placeholder="display name"
-              required
-            />
-            <input
-              value={editTarget.summary ?? ''}
-              onChange={(event) => setEditTarget({ ...editTarget, summary: event.target.value || null })}
-              placeholder="summary"
-            />
-            <textarea
-              value={editTarget.description ?? ''}
-              onChange={(event) => setEditTarget({ ...editTarget, description: event.target.value || null })}
-              placeholder="description"
-              rows={4}
-            />
+            <Field label="Display name">
+              <input
+                className={INPUT_CLASS}
+                value={editTarget.displayName}
+                onChange={(event) => setEditTarget({ ...editTarget, displayName: event.target.value })}
+                placeholder="display name"
+                required
+              />
+            </Field>
+            <Field label="Summary">
+              <input
+                className={INPUT_CLASS}
+                value={editTarget.summary ?? ''}
+                onChange={(event) => setEditTarget({ ...editTarget, summary: event.target.value || null })}
+                placeholder="summary"
+              />
+            </Field>
+            <Field label="Description">
+              <textarea
+                className={`${INPUT_CLASS} min-h-24`}
+                value={editTarget.description ?? ''}
+                onChange={(event) => setEditTarget({ ...editTarget, description: event.target.value || null })}
+                placeholder="description"
+                rows={4}
+              />
+            </Field>
             <RoleMultiSelect
               value={editTarget.allowedRoleCodes ?? []}
               onChange={(allowedRoleCodes) => setEditTarget({ ...editTarget, allowedRoleCodes })}
             />
-            <div className="sdkwork-surface-drawer-form-actions">
-              <button type="button" onClick={() => setEditTarget(null)}>Cancel</button>
-              <button type="submit">Save Changes</button>
+            <div className="sdkwork-surface-drawer-form-actions flex justify-end gap-2">
+              <button type="button" className={SECONDARY_BUTTON_CLASS} onClick={() => setEditTarget(null)}>
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="rounded-md bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-500"
+              >
+                Save changes
+              </button>
             </div>
           </form>
         ) : null}
       </SurfaceDrawer>
+
       <ConfirmModal
         open={deleteTarget != null}
         title="Delete skill package?"
