@@ -1,14 +1,22 @@
-import { SKILLS_ASSIGNABLE_ROLES, type SkillsAssignableRole } from '@sdkwork/skills-pc-admin-core';
+import { useState } from 'react';
+
+import {
+  SKILLS_ASSIGNABLE_ROLES,
+  normalizeAllowedRoleCodes,
+  type SkillsAssignableRole,
+} from '@sdkwork/skills-pc-admin-core';
 
 import { useSkillsAdminCopy } from '../copy/skillsAdminCopy';
+import { SelectionField } from './SelectionField';
+import { SelectionModal } from './SelectionModal';
 
 /**
  * Multi-select for the IAM roles a Skill package is assigned to.
  *
  * An empty selection is the default and means every role can see the package,
- * so "All roles" is the first row and clears every specific role. Codes already
- * assigned but absent from the shared catalog stay selectable, so an
- * organization-defined role never silently disappears from the form.
+ * so "All roles" is the first row of the picker and clears every specific role.
+ * Codes already assigned but absent from the shared catalog stay selectable, so
+ * an organization-defined role never silently disappears from the form.
  */
 export function RoleMultiSelect({
   value,
@@ -20,8 +28,8 @@ export function RoleMultiSelect({
   disabled?: boolean;
 }) {
   const copy = useSkillsAdminCopy();
+  const [open, setOpen] = useState(false);
   const selected = new Set(value);
-  const allRoles = value.length === 0;
   const known = new Set(SKILLS_ASSIGNABLE_ROLES.map((role) => role.code));
   const extras: SkillsAssignableRole[] = [...selected]
     .filter((code) => !known.has(code))
@@ -30,46 +38,50 @@ export function RoleMultiSelect({
   const roles = [...SKILLS_ASSIGNABLE_ROLES, ...extras];
   const localizedLabels: Record<string, string> = copy.roles.labels;
 
+  function labelFor(code: string): string {
+    return localizedLabels[code] ?? roles.find((role) => role.code === code)?.label ?? code;
+  }
+
+  const chips = roles
+    .filter((role) => selected.has(role.code))
+    .map((role) => ({ key: role.code, label: labelFor(role.code) }));
+  const options = roles.map((role) => ({
+    value: role.code,
+    label: labelFor(role.code),
+    description: role.code,
+  }));
+
   return (
-    <fieldset
-      disabled={disabled}
-      className="rounded-lg border border-zinc-700 bg-zinc-800/40 p-3"
-    >
-      <legend className="px-1 text-xs font-medium uppercase tracking-wide text-zinc-400">
-        {copy.roles.legend}
-      </legend>
-      <div className="grid gap-1.5">
-        <label className="flex items-center gap-2 text-sm font-medium text-zinc-200">
-          <input
-            type="checkbox"
-            checked={allRoles}
-            onChange={() => onChange([])}
-            className="size-4 rounded border-zinc-600 bg-zinc-800"
-          />
-          <span>{copy.roles.allRoles}</span>
-        </label>
-        {roles.map((role) => (
-          <label key={role.code} className="flex items-center gap-2 text-sm text-zinc-300">
-            <input
-              type="checkbox"
-              checked={selected.has(role.code)}
-              onChange={(event) => {
-                const next = new Set(value);
-                if (event.target.checked) {
-                  next.add(role.code);
-                } else {
-                  next.delete(role.code);
-                }
-                onChange([...next]);
-              }}
-              className="size-4 rounded border-zinc-600 bg-zinc-800"
-            />
-            <span>
-              {localizedLabels[role.code] ?? role.label} (<code className="font-mono text-xs text-zinc-400">{role.code}</code>)
-            </span>
-          </label>
-        ))}
-      </div>
-    </fieldset>
+    <>
+      <SelectionField
+        label={copy.roles.legend}
+        placeholder={copy.roles.allRoles}
+        selected={chips}
+        onOpen={() => setOpen(true)}
+        disabled={disabled}
+        expanded={open}
+        tone="zinc"
+      />
+      <SelectionModal
+        open={open}
+        title={copy.roles.modalTitle}
+        description={copy.roles.modalDescription}
+        options={options}
+        value={value}
+        onCancel={() => setOpen(false)}
+        onConfirm={(next) => {
+          setOpen(false);
+          onChange(normalizeAllowedRoleCodes(next));
+        }}
+        searchPlaceholder={copy.selection.searchPlaceholder}
+        noMatchLabel={copy.selection.noMatch}
+        selectedCountLabel={copy.selection.selectedCount}
+        cancelLabel={copy.selection.cancel}
+        confirmLabel={copy.selection.confirm}
+        clearLabel={copy.selection.clear}
+        emptyOptionLabel={copy.roles.allRoles}
+        closeLabel={copy.overlay.close}
+      />
+    </>
   );
 }

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { useEffect, useId, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import { isBlank, trim } from '@sdkwork/utils';
 import { isDriveArtifactRef } from '@sdkwork/skills-pc-commons/driveUri';
 import {
@@ -23,6 +23,7 @@ import {
 
 import { uploadSkillPackageArchive } from './services/skillPackageUploadService';
 import { ConfirmModal, SurfaceDrawer } from './components/SurfaceOverlay.tsx';
+import { CategoryMultiSelect } from './components/CategoryMultiSelect.tsx';
 import { RoleMultiSelect } from './components/RoleMultiSelect.tsx';
 import { useSkillsAdminCopy } from './copy/skillsAdminCopy';
 
@@ -33,14 +34,29 @@ export {
   type SkillsAdminCopy,
 } from './copy/skillsAdminCopy';
 
+export {
+  SelectionField,
+  type SelectionChip,
+  type SelectionFieldProps,
+} from './components/SelectionField';
+export {
+  SelectionModal,
+  type SelectionModalProps,
+  type SelectionOption,
+} from './components/SelectionModal';
+
 const INPUT_CLASS =
   'w-full rounded-md border border-zinc-700 bg-zinc-800/60 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-60';
 const LABEL_CLASS = 'grid gap-1.5 text-sm';
 const LABEL_TEXT_CLASS = 'text-xs font-medium text-zinc-400';
 const SECONDARY_BUTTON_CLASS =
   'rounded-md border border-zinc-700 bg-zinc-800/60 px-3 py-1.5 text-sm text-zinc-200 hover:bg-zinc-700/60 disabled:opacity-60';
+const PRIMARY_BUTTON_CLASS =
+  'rounded-md bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-500 disabled:opacity-60';
+const ALERT_CLASS =
+  'rounded-md border border-red-800 bg-red-950/50 px-3 py-2 text-sm text-red-400';
 
-function Field({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
+function Field({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {
   return (
     <label className={LABEL_CLASS}>
       <span className={LABEL_TEXT_CLASS}>{label}</span>
@@ -62,10 +78,14 @@ export function AdminSkillsPage({
   const copy = useSkillsAdminCopy();
   const clients = useSkillsClients();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const createFormId = useId();
+  const editFormId = useId();
   const [packages, setPackages] = useState<SkillPackageRecord[]>([]);
   const [categories, setCategories] = useState<SkillCategoryRecord[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [selectedFileName, setSelectedFileName] = useState<string | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<SkillPackageRecord | null>(null);
@@ -117,6 +137,23 @@ export function AdminSkillsPage({
     if (found) setEditTarget(found);
   }, [initialEditPackageId, packages]);
 
+  function openCreate() {
+    setError(null);
+    setCreateOpen(true);
+  }
+
+  function closeCreate() {
+    if (creating) return;
+    setCreateOpen(false);
+    setError(null);
+  }
+
+  function closeEdit() {
+    if (saving) return;
+    setEditTarget(null);
+    setError(null);
+  }
+
   async function onUploadSelectedFile() {
     const file = fileInputRef.current?.files?.[0];
     if (!file) {
@@ -167,12 +204,40 @@ export function AdminSkillsPage({
       setError(copy.admin.errors.noCategoryPermission);
       return;
     }
+    setCreating(true);
     try {
       await createSkillPackage(clients, form);
       setCreateOpen(false);
       await reload();
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : String(cause));
+    } finally {
+      setCreating(false);
+    }
+  }
+
+  async function onUpdatePackage(event: FormEvent) {
+    event.preventDefault();
+    const current = editTarget;
+    if (!current) return;
+    setError(null);
+    setSaving(true);
+    try {
+      await updateSkillPackage(clients, current.id, {
+        version: current.version,
+        ...(current.displayName ? { displayName: current.displayName } : {}),
+        ...(current.summary ? { summary: current.summary } : {}),
+        ...(current.description ? { description: current.description } : {}),
+        ...(current.categories.length > 0 ? { categories: current.categories } : {}),
+        ...(current.tags.length > 0 ? { tags: current.tags } : {}),
+        allowedRoleCodes: normalizeAllowedRoleCodes(current.allowedRoleCodes ?? []),
+      });
+      setEditTarget(null);
+      await reload();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : String(cause));
+    } finally {
+      setSaving(false);
     }
   }
 
@@ -200,18 +265,15 @@ export function AdminSkillsPage({
         </div>
         <button
           type="button"
-          className="rounded-md bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-500"
-          onClick={() => setCreateOpen(true)}
+          className={PRIMARY_BUTTON_CLASS}
+          onClick={openCreate}
         >
           {copy.admin.createPackage}
         </button>
       </header>
 
-      {error ? (
-        <div
-          role="alert"
-          className="rounded-md border border-red-800 bg-red-950/50 px-3 py-2 text-sm text-red-400"
-        >
+      {error && !createOpen && editTarget === null ? (
+        <div role="alert" className={ALERT_CLASS}>
           {error}
         </div>
       ) : null}
@@ -222,8 +284,8 @@ export function AdminSkillsPage({
             <p className="text-sm text-zinc-400">{copy.admin.empty}</p>
             <button
               type="button"
-              className="rounded-md bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-500"
-              onClick={() => setCreateOpen(true)}
+              className={PRIMARY_BUTTON_CLASS}
+              onClick={openCreate}
             >
               {copy.admin.createPackage}
             </button>
@@ -299,9 +361,38 @@ export function AdminSkillsPage({
         open={createOpen}
         title={copy.admin.createDrawer.title}
         description={copy.admin.createDrawer.description}
-        onClose={() => setCreateOpen(false)}
+        onClose={closeCreate}
+        footer={
+          <div className="flex items-center justify-end gap-2">
+            <button
+              type="button"
+              className={SECONDARY_BUTTON_CLASS}
+              onClick={closeCreate}
+              disabled={creating}
+            >
+              {copy.admin.createDrawer.cancel}
+            </button>
+            <button
+              type="submit"
+              form={createFormId}
+              className={PRIMARY_BUTTON_CLASS}
+              disabled={
+                creating || uploading || isBlank(trim(form.initialArtifact.artifactRef))
+              }
+            >
+              {creating
+                ? copy.admin.createDrawer.submitting
+                : copy.admin.createDrawer.submit}
+            </button>
+          </div>
+        }
       >
-        <form onSubmit={onSubmit} className="grid gap-4">
+        <form id={createFormId} onSubmit={onSubmit} className="grid gap-4">
+          {error ? (
+            <div role="alert" className={ALERT_CLASS}>
+              {error}
+            </div>
+          ) : null}
           <Field label={copy.admin.createDrawer.skillKey}>
             <input
               className={INPUT_CLASS}
@@ -320,42 +411,18 @@ export function AdminSkillsPage({
               required
             />
           </Field>
-          <fieldset className="rounded-lg border border-zinc-700 bg-zinc-800/40 p-3">
-            <legend className="px-1 text-xs font-medium uppercase tracking-wide text-zinc-400">
-              {copy.admin.createDrawer.categories}
-            </legend>
-            <div className="grid gap-1.5">
-              {categories.map((category) => (
-                <label
-                  key={category.id}
-                  className="flex items-start gap-2 text-sm text-zinc-300"
-                >
-                  <input
-                    type="checkbox"
-                    checked={(form.categories ?? []).includes(category.code)}
-                    onChange={(event) => {
-                      const current = new Set(form.categories ?? []);
-                      if (event.target.checked) {
-                        current.add(category.code);
-                      } else {
-                        current.delete(category.code);
-                      }
-                      setForm({ ...form, categories: [...current] });
-                    }}
-                    className="mt-0.5 size-4 rounded border-zinc-600 bg-zinc-800"
-                  />
-                  <span>
-                    {category.name}
-                    <span className="ml-1 font-mono text-xs text-zinc-500">({category.code})</span>
-                    <span className="block text-xs text-zinc-500">{category.permissionCode}</span>
-                  </span>
-                </label>
-              ))}
-            </div>
-          </fieldset>
+          <CategoryMultiSelect
+            categories={categories}
+            value={form.categories ?? []}
+            onChange={(selectedCategories) =>
+              setForm({ ...form, categories: selectedCategories })
+            }
+            disabled={creating}
+          />
           <RoleMultiSelect
             value={form.allowedRoleCodes ?? []}
             onChange={(allowedRoleCodes) => setForm({ ...form, allowedRoleCodes })}
+            disabled={creating}
           />
           <fieldset className="rounded-lg border border-zinc-700 bg-zinc-800/40 p-3">
             <legend className="px-1 text-xs font-medium uppercase tracking-wide text-zinc-400">
@@ -392,32 +459,23 @@ export function AdminSkillsPage({
               />
             </div>
           </fieldset>
-          <div className="flex items-center justify-between gap-3">
-            <Field label={copy.admin.createDrawer.artifactVersion}>
-              <input
-                className={`${INPUT_CLASS} w-40`}
-                value={form.initialArtifact.versionLabel}
-                onChange={(event) =>
-                  setForm({
-                    ...form,
-                    initialArtifact: {
-                      ...form.initialArtifact,
-                      versionLabel: event.target.value,
-                    },
-                  })
-                }
-                placeholder={copy.admin.createDrawer.artifactVersionPlaceholder}
-                required
-              />
-            </Field>
-            <button
-              type="submit"
-              className="self-end rounded-md bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-500 disabled:opacity-60"
-              disabled={isBlank(trim(form.initialArtifact.artifactRef)) || uploading}
-            >
-              {copy.admin.createDrawer.submit}
-            </button>
-          </div>
+          <Field label={copy.admin.createDrawer.artifactVersion}>
+            <input
+              className={`${INPUT_CLASS} w-40`}
+              value={form.initialArtifact.versionLabel}
+              onChange={(event) =>
+                setForm({
+                  ...form,
+                  initialArtifact: {
+                    ...form.initialArtifact,
+                    versionLabel: event.target.value,
+                  },
+                })
+              }
+              placeholder={copy.admin.createDrawer.artifactVersionPlaceholder}
+              required
+            />
+          </Field>
         </form>
       </SurfaceDrawer>
 
@@ -428,33 +486,37 @@ export function AdminSkillsPage({
             ? copy.admin.editDrawer.title(editTarget.skillKey)
             : copy.admin.editDrawer.fallbackTitle
         }
-        onClose={() => setEditTarget(null)}
+        onClose={closeEdit}
+        footer={
+          editTarget ? (
+            <div className="flex items-center justify-end gap-2">
+              <button
+                type="button"
+                className={SECONDARY_BUTTON_CLASS}
+                onClick={closeEdit}
+                disabled={saving}
+              >
+                {copy.admin.editDrawer.cancel}
+              </button>
+              <button
+                type="submit"
+                form={editFormId}
+                className={PRIMARY_BUTTON_CLASS}
+                disabled={saving}
+              >
+                {saving ? copy.admin.editDrawer.saving : copy.admin.editDrawer.save}
+              </button>
+            </div>
+          ) : null
+        }
       >
         {editTarget ? (
-          <form
-            onSubmit={(event) => {
-              event.preventDefault();
-              const current = editTarget;
-              setError(null);
-              void updateSkillPackage(clients, current.id, {
-                version: current.version,
-                ...(current.displayName ? { displayName: current.displayName } : {}),
-                ...(current.summary ? { summary: current.summary } : {}),
-                ...(current.description ? { description: current.description } : {}),
-                ...(current.categories.length > 0 ? { categories: current.categories } : {}),
-                ...(current.tags.length > 0 ? { tags: current.tags } : {}),
-                allowedRoleCodes: normalizeAllowedRoleCodes(current.allowedRoleCodes ?? []),
-              })
-                .then(async () => {
-                  setEditTarget(null);
-                  await reload();
-                })
-                .catch((cause: unknown) => {
-                  setError(cause instanceof Error ? cause.message : String(cause));
-                });
-            }}
-            className="grid gap-4"
-          >
+          <form id={editFormId} onSubmit={onUpdatePackage} className="grid gap-4">
+            {error ? (
+              <div role="alert" className={ALERT_CLASS}>
+                {error}
+              </div>
+            ) : null}
             <Field label={copy.admin.editDrawer.displayName}>
               <input
                 className={INPUT_CLASS}
@@ -484,18 +546,8 @@ export function AdminSkillsPage({
             <RoleMultiSelect
               value={editTarget.allowedRoleCodes ?? []}
               onChange={(allowedRoleCodes) => setEditTarget({ ...editTarget, allowedRoleCodes })}
+              disabled={saving}
             />
-            <div className="sdkwork-surface-drawer-form-actions flex justify-end gap-2">
-              <button type="button" className={SECONDARY_BUTTON_CLASS} onClick={() => setEditTarget(null)}>
-                {copy.admin.editDrawer.cancel}
-              </button>
-              <button
-                type="submit"
-                className="rounded-md bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-500"
-              >
-                {copy.admin.editDrawer.save}
-              </button>
-            </div>
           </form>
         ) : null}
       </SurfaceDrawer>

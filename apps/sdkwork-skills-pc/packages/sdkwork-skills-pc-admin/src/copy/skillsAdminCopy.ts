@@ -18,10 +18,21 @@ const en = {
   overlay: {
     close: 'Close',
   },
+  selection: {
+    searchPlaceholder: 'Search…',
+    noMatch: 'No matching options.',
+    selectedCount: (count: number) => `${count} selected`,
+    clear: 'Clear selection',
+    cancel: 'Cancel',
+    confirm: 'Apply',
+  },
   roles: {
     legend: 'Visible to roles',
     allRoles: 'All roles (default)',
     customRole: 'Custom role',
+    modalTitle: 'Select visible roles',
+    modalDescription:
+      'The package is visible to every selected role. Leave the selection empty to keep it visible to all roles.',
     /**
      * Role labels come from the shared IAM assignable-role catalog. Only
      * localized overrides live here, so an English host still renders the
@@ -65,6 +76,10 @@ const en = {
       displayName: 'Display name',
       displayNamePlaceholder: 'Demo Sample Skill',
       categories: 'Categories',
+      categoriesPlaceholder: 'Select categories',
+      categoriesModalTitle: 'Select categories',
+      categoriesModalDescription:
+        'The package is filed under every selected category. Manage the taxonomy in Skill categories.',
       artifactSection: 'Artifact (via sdkwork-drive)',
       uploadArtifact: 'Upload artifact',
       uploading: 'Uploading…',
@@ -72,6 +87,8 @@ const en = {
       artifactRefPlaceholder: 'artifactRef (drive://spaces/.../nodes/...)',
       artifactVersion: 'Artifact version',
       artifactVersionPlaceholder: '1.0.0',
+      cancel: 'Cancel',
+      submitting: 'Creating…',
       submit: 'Create package and artifact',
     },
     editDrawer: {
@@ -84,6 +101,7 @@ const en = {
       description: 'Description',
       descriptionPlaceholder: 'description',
       cancel: 'Cancel',
+      saving: 'Saving…',
       save: 'Save changes',
     },
     deleteConfirm: {
@@ -235,10 +253,20 @@ const zh: SkillsAdminCopy = {
   overlay: {
     close: '关闭',
   },
+  selection: {
+    searchPlaceholder: '搜索…',
+    noMatch: '无匹配项',
+    selectedCount: (count) => `已选 ${count} 项`,
+    clear: '清空选择',
+    cancel: '取消',
+    confirm: '确定',
+  },
   roles: {
     legend: '可见角色',
     allRoles: '全部角色（默认）',
     customRole: '自定义角色',
+    modalTitle: '选择可见角色',
+    modalDescription: '技能包对所选角色可见；不选择任何角色时，默认对全部角色可见。',
     labels: {
       app_user: '应用用户',
       org_admin: '组织管理员',
@@ -286,6 +314,9 @@ const zh: SkillsAdminCopy = {
       displayName: '显示名称',
       displayNamePlaceholder: '示例技能',
       categories: '分类',
+      categoriesPlaceholder: '选择分类',
+      categoriesModalTitle: '选择分类',
+      categoriesModalDescription: '技能包会归档到所选的每个分类；如需维护分类，请前往技能分类管理。',
       artifactSection: '产物（通过 sdkwork-drive）',
       uploadArtifact: '上传产物',
       uploading: '上传中…',
@@ -293,6 +324,8 @@ const zh: SkillsAdminCopy = {
       artifactRefPlaceholder: '产物引用（drive://spaces/.../nodes/...）',
       artifactVersion: '产物版本',
       artifactVersionPlaceholder: '1.0.0',
+      cancel: '取消',
+      submitting: '创建中…',
       submit: '创建技能包与产物',
     },
     editDrawer: {
@@ -305,6 +338,7 @@ const zh: SkillsAdminCopy = {
       description: '描述',
       descriptionPlaceholder: '描述',
       cancel: '取消',
+      saving: '保存中…',
       save: '保存修改',
     },
     deleteConfirm: {

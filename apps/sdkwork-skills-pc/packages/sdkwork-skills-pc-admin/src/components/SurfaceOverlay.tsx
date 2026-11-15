@@ -1,6 +1,7 @@
-import type { ReactNode } from 'react';
+import { useEffect, useId, type ReactNode } from 'react';
 
 import { useSkillsAdminCopy } from '../copy/skillsAdminCopy';
+import { useFocusTrap } from './useFocusTrap';
 
 export interface SurfaceDrawerProps {
   open: boolean;
@@ -30,6 +31,19 @@ export function SurfaceDrawer({
   size = 'lg',
 }: SurfaceDrawerProps) {
   const copy = useSkillsAdminCopy();
+  const titleId = useId();
+  const descriptionId = useId();
+  const { containerRef, onKeyDown } = useFocusTrap<HTMLElement>(open);
+
+  useEffect(() => {
+    if (!open) return;
+    const onEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && !event.defaultPrevented) onClose();
+    };
+    document.addEventListener('keydown', onEscape);
+    return () => document.removeEventListener('keydown', onEscape);
+  }, [open, onClose]);
+
   if (!open) return null;
   return (
     <div
@@ -38,24 +52,33 @@ export function SurfaceDrawer({
     >
       <button
         type="button"
+        tabIndex={-1}
         className="sdkwork-surface-drawer-backdrop absolute inset-0 cursor-default"
         aria-label={copy.overlay.close}
         onClick={onClose}
       />
       <aside
-        className={`sdkwork-surface-drawer-panel sdkwork-surface-drawer-panel--${size} relative flex h-full w-full flex-col border-l border-zinc-800 bg-zinc-900 shadow-2xl ${
+        ref={containerRef}
+        tabIndex={-1}
+        onKeyDown={onKeyDown}
+        className={`sdkwork-surface-drawer-panel sdkwork-surface-drawer-panel--${size} relative flex h-full w-full flex-col border-l border-zinc-800 bg-zinc-900 shadow-2xl focus:outline-none ${
           size === 'lg' ? 'max-w-2xl' : 'max-w-lg'
         }`}
         role="dialog"
         aria-modal="true"
-        aria-labelledby="sdkwork-surface-drawer-title"
+        aria-labelledby={titleId}
+        aria-describedby={description ? descriptionId : undefined}
       >
         <header className="sdkwork-surface-drawer-header flex items-start justify-between gap-4 border-b border-zinc-800 px-5 py-4">
           <div>
-            <h3 id="sdkwork-surface-drawer-title" className="text-base font-semibold text-zinc-100">
+            <h3 id={titleId} className="text-base font-semibold text-zinc-100">
               {title}
             </h3>
-            {description ? <p className="mt-1 text-sm text-zinc-400">{description}</p> : null}
+            {description ? (
+              <p id={descriptionId} className="mt-1 text-sm text-zinc-400">
+                {description}
+              </p>
+            ) : null}
           </div>
           <button
             type="button"
@@ -99,6 +122,19 @@ export function ConfirmModal({
   onCancel,
 }: ConfirmModalProps) {
   const copy = useSkillsAdminCopy();
+  const titleId = useId();
+  const descriptionId = useId();
+  const { containerRef, onKeyDown } = useFocusTrap<HTMLDivElement>(open);
+
+  useEffect(() => {
+    if (!open) return;
+    const onEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && !busy && !event.defaultPrevented) onCancel();
+    };
+    document.addEventListener('keydown', onEscape);
+    return () => document.removeEventListener('keydown', onEscape);
+  }, [open, busy, onCancel]);
+
   if (!open) return null;
   return (
     <div
@@ -107,22 +143,26 @@ export function ConfirmModal({
     >
       <button
         type="button"
+        tabIndex={-1}
         className="sdkwork-surface-drawer-backdrop absolute inset-0 cursor-default"
         aria-label={copy.overlay.close}
         onClick={onCancel}
         disabled={busy}
       />
       <div
-        className="sdkwork-surface-modal-panel relative w-full max-w-md rounded-lg border border-zinc-800 bg-zinc-900 p-5 shadow-2xl"
+        ref={containerRef}
+        tabIndex={-1}
+        onKeyDown={onKeyDown}
+        className="sdkwork-surface-modal-panel relative w-full max-w-md rounded-lg border border-zinc-800 bg-zinc-900 p-5 shadow-2xl focus:outline-none"
         role="alertdialog"
         aria-modal="true"
-        aria-labelledby="sdkwork-surface-modal-title"
-        aria-describedby="sdkwork-surface-modal-description"
+        aria-labelledby={titleId}
+        aria-describedby={descriptionId}
       >
-        <h3 id="sdkwork-surface-modal-title" className="text-base font-semibold text-zinc-100">
+        <h3 id={titleId} className="text-base font-semibold text-zinc-100">
           {title}
         </h3>
-        <p id="sdkwork-surface-modal-description" className="mt-2 text-sm text-zinc-400">
+        <p id={descriptionId} className="mt-2 text-sm text-zinc-400">
           {description}
         </p>
         <div className="sdkwork-surface-modal-actions mt-4 flex justify-end gap-2">
