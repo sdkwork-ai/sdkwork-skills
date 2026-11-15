@@ -13,7 +13,6 @@ import {
   createSkillCategory,
   createSkillPackage,
   deleteSkillPackage,
-  describeAllowedRoleCodes,
   listManagedSkillCategories,
   listManagedSkillPackages,
   normalizeAllowedRoleCodes,
@@ -25,6 +24,14 @@ import {
 import { uploadSkillPackageArchive } from './services/skillPackageUploadService';
 import { ConfirmModal, SurfaceDrawer } from './components/SurfaceOverlay.tsx';
 import { RoleMultiSelect } from './components/RoleMultiSelect.tsx';
+import { useSkillsAdminCopy } from './copy/skillsAdminCopy';
+
+export {
+  SKILLS_ADMIN_COPY,
+  useSkillsAdminCopy,
+  useSkillsAdminLocale,
+  type SkillsAdminCopy,
+} from './copy/skillsAdminCopy';
 
 const INPUT_CLASS =
   'w-full rounded-md border border-zinc-700 bg-zinc-800/60 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-60';
@@ -52,6 +59,7 @@ export function AdminSkillsPage({
   roleCodes?: readonly string[];
   initialEditPackageId?: string | null;
 }) {
+  const copy = useSkillsAdminCopy();
   const clients = useSkillsClients();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [packages, setPackages] = useState<SkillPackageRecord[]>([]);
@@ -67,8 +75,8 @@ export function AdminSkillsPage({
     skillKey: 'skill.demo.sample',
     packageKey: 'demo-sample',
     code: 'demo-sample',
-    displayName: 'Demo Sample Skill',
-    summary: 'Skill package uploaded through sdkwork-drive',
+    displayName: copy.admin.defaults.displayName,
+    summary: copy.admin.defaults.summary,
     categories: [],
     tags: ['demo'],
     allowedRoleCodes: [],
@@ -112,7 +120,7 @@ export function AdminSkillsPage({
   async function onUploadSelectedFile() {
     const file = fileInputRef.current?.files?.[0];
     if (!file) {
-      setError('Select a Skill package archive to upload through sdkwork-drive.');
+      setError(copy.admin.errors.selectArchive);
       return;
     }
     setUploading(true);
@@ -140,11 +148,11 @@ export function AdminSkillsPage({
     event.preventDefault();
     setError(null);
     if (!isDriveArtifactRef(form.initialArtifact.artifactRef)) {
-      setError('Upload an artifact through sdkwork-drive before creating the Skill package.');
+      setError(copy.admin.errors.needArtifact);
       return;
     }
     if (!/^[0-9a-f]{64}$/.test(form.initialArtifact.checksumSha256)) {
-      setError('The uploaded artifact is missing a valid SHA-256 checksum.');
+      setError(copy.admin.errors.checksum);
       return;
     }
     const selectedCategories = form.categories ?? [];
@@ -156,7 +164,7 @@ export function AdminSkillsPage({
         categories,
       )
     ) {
-      setError('You do not have package-manage permission for the selected categories.');
+      setError(copy.admin.errors.noCategoryPermission);
       return;
     }
     try {
@@ -187,17 +195,15 @@ export function AdminSkillsPage({
     <section className="flex flex-col gap-4 p-6">
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="text-lg font-semibold text-zinc-100">Admin Skills</h2>
-          <p className="mt-0.5 text-sm text-zinc-400">
-            Curate the Skill package catalog — create packages, bind categories, and manage role visibility.
-          </p>
+          <h2 className="text-lg font-semibold text-zinc-100">{copy.admin.title}</h2>
+          <p className="mt-0.5 text-sm text-zinc-400">{copy.admin.description}</p>
         </div>
         <button
           type="button"
           className="rounded-md bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-500"
           onClick={() => setCreateOpen(true)}
         >
-          Create package
+          {copy.admin.createPackage}
         </button>
       </header>
 
@@ -213,24 +219,24 @@ export function AdminSkillsPage({
       <div className="overflow-hidden rounded-lg border border-zinc-800 bg-zinc-900/60">
         {packages.length === 0 ? (
           <div className="flex flex-col items-center gap-3 px-6 py-10 text-center">
-            <p className="text-sm text-zinc-400">No skill packages yet.</p>
+            <p className="text-sm text-zinc-400">{copy.admin.empty}</p>
             <button
               type="button"
               className="rounded-md bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-500"
               onClick={() => setCreateOpen(true)}
             >
-              Create package
+              {copy.admin.createPackage}
             </button>
           </div>
         ) : (
           <table className="w-full text-left text-sm">
             <thead className="bg-zinc-800/60 text-xs uppercase tracking-wide text-zinc-400">
               <tr>
-                <th className="px-3 py-2.5 font-medium">Name</th>
-                <th className="px-3 py-2.5 font-medium">Skill key</th>
-                <th className="px-3 py-2.5 font-medium">Categories</th>
-                <th className="px-3 py-2.5 font-medium">Roles</th>
-                <th className="px-3 py-2.5 font-medium">Actions</th>
+                <th className="px-3 py-2.5 font-medium">{copy.admin.table.name}</th>
+                <th className="px-3 py-2.5 font-medium">{copy.admin.table.skillKey}</th>
+                <th className="px-3 py-2.5 font-medium">{copy.admin.table.categories}</th>
+                <th className="px-3 py-2.5 font-medium">{copy.admin.table.roles}</th>
+                <th className="px-3 py-2.5 font-medium">{copy.admin.table.actions}</th>
               </tr>
             </thead>
             <tbody>
@@ -256,11 +262,13 @@ export function AdminSkillsPage({
                         ))}
                       </div>
                     ) : (
-                      <span className="text-zinc-500">—</span>
+                      <span className="text-zinc-500">{copy.admin.table.noValue}</span>
                     )}
                   </td>
                   <td className="px-3 py-2.5 text-zinc-400">
-                    {describeAllowedRoleCodes(item.allowedRoleCodes)}
+                    {item.allowedRoleCodes.length === 0
+                      ? copy.admin.table.allRoles
+                      : normalizeAllowedRoleCodes(item.allowedRoleCodes ?? []).join(', ')}
                   </td>
                   <td className="px-3 py-2.5">
                     <div className="flex gap-2">
@@ -269,14 +277,14 @@ export function AdminSkillsPage({
                         className={SECONDARY_BUTTON_CLASS}
                         onClick={() => setEditTarget(item)}
                       >
-                        Edit
+                        {copy.admin.table.edit}
                       </button>
                       <button
                         type="button"
                         className="rounded-md border border-red-900/60 bg-red-950/40 px-3 py-1.5 text-sm text-red-400 hover:bg-red-900/40"
                         onClick={() => setDeleteTarget(item)}
                       >
-                        Delete
+                        {copy.admin.table.delete}
                       </button>
                     </div>
                   </td>
@@ -289,32 +297,32 @@ export function AdminSkillsPage({
 
       <SurfaceDrawer
         open={createOpen}
-        title="Create package and artifact"
-        description="Uploads the Skill archive through sdkwork-drive, then registers the package."
+        title={copy.admin.createDrawer.title}
+        description={copy.admin.createDrawer.description}
         onClose={() => setCreateOpen(false)}
       >
         <form onSubmit={onSubmit} className="grid gap-4">
-          <Field label="Skill key">
+          <Field label={copy.admin.createDrawer.skillKey}>
             <input
               className={INPUT_CLASS}
               value={form.skillKey}
               onChange={(event) => setForm({ ...form, skillKey: event.target.value })}
-              placeholder="skill.demo.sample"
+              placeholder={copy.admin.createDrawer.skillKeyPlaceholder}
               required
             />
           </Field>
-          <Field label="Display name">
+          <Field label={copy.admin.createDrawer.displayName}>
             <input
               className={INPUT_CLASS}
               value={form.displayName}
               onChange={(event) => setForm({ ...form, displayName: event.target.value })}
-              placeholder="Demo Sample Skill"
+              placeholder={copy.admin.createDrawer.displayNamePlaceholder}
               required
             />
           </Field>
           <fieldset className="rounded-lg border border-zinc-700 bg-zinc-800/40 p-3">
             <legend className="px-1 text-xs font-medium uppercase tracking-wide text-zinc-400">
-              Categories
+              {copy.admin.createDrawer.categories}
             </legend>
             <div className="grid gap-1.5">
               {categories.map((category) => (
@@ -351,7 +359,7 @@ export function AdminSkillsPage({
           />
           <fieldset className="rounded-lg border border-zinc-700 bg-zinc-800/40 p-3">
             <legend className="px-1 text-xs font-medium uppercase tracking-wide text-zinc-400">
-              Artifact (via sdkwork-drive)
+              {copy.admin.createDrawer.artifactSection}
             </legend>
             <div className="grid gap-2">
               <input
@@ -366,22 +374,26 @@ export function AdminSkillsPage({
                 onClick={onUploadSelectedFile}
                 disabled={uploading}
               >
-                {uploading ? 'Uploading…' : 'Upload artifact'}
+                {uploading
+                  ? copy.admin.createDrawer.uploading
+                  : copy.admin.createDrawer.uploadArtifact}
               </button>
               {selectedFileName ? (
-                <p className="text-xs text-emerald-400">Uploaded: {selectedFileName}</p>
+                <p className="text-xs text-emerald-400">
+                  {copy.admin.createDrawer.uploadedFile(selectedFileName)}
+                </p>
               ) : null}
               <input
                 className={`${INPUT_CLASS} font-mono text-xs`}
                 value={form.initialArtifact.artifactRef}
                 readOnly
-                placeholder="artifactRef (drive://spaces/.../nodes/...)"
+                placeholder={copy.admin.createDrawer.artifactRefPlaceholder}
                 required
               />
             </div>
           </fieldset>
           <div className="flex items-center justify-between gap-3">
-            <Field label="Artifact version">
+            <Field label={copy.admin.createDrawer.artifactVersion}>
               <input
                 className={`${INPUT_CLASS} w-40`}
                 value={form.initialArtifact.versionLabel}
@@ -394,7 +406,7 @@ export function AdminSkillsPage({
                     },
                   })
                 }
-                placeholder="1.0.0"
+                placeholder={copy.admin.createDrawer.artifactVersionPlaceholder}
                 required
               />
             </Field>
@@ -403,7 +415,7 @@ export function AdminSkillsPage({
               className="self-end rounded-md bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-500 disabled:opacity-60"
               disabled={isBlank(trim(form.initialArtifact.artifactRef)) || uploading}
             >
-              Create package and artifact
+              {copy.admin.createDrawer.submit}
             </button>
           </div>
         </form>
@@ -411,7 +423,11 @@ export function AdminSkillsPage({
 
       <SurfaceDrawer
         open={editTarget != null}
-        title={editTarget ? `Update ${editTarget.skillKey}` : 'Update package'}
+        title={
+          editTarget
+            ? copy.admin.editDrawer.title(editTarget.skillKey)
+            : copy.admin.editDrawer.fallbackTitle
+        }
         onClose={() => setEditTarget(null)}
       >
         {editTarget ? (
@@ -439,29 +455,29 @@ export function AdminSkillsPage({
             }}
             className="grid gap-4"
           >
-            <Field label="Display name">
+            <Field label={copy.admin.editDrawer.displayName}>
               <input
                 className={INPUT_CLASS}
                 value={editTarget.displayName}
                 onChange={(event) => setEditTarget({ ...editTarget, displayName: event.target.value })}
-                placeholder="display name"
+                placeholder={copy.admin.editDrawer.displayNamePlaceholder}
                 required
               />
             </Field>
-            <Field label="Summary">
+            <Field label={copy.admin.editDrawer.summary}>
               <input
                 className={INPUT_CLASS}
                 value={editTarget.summary ?? ''}
                 onChange={(event) => setEditTarget({ ...editTarget, summary: event.target.value || null })}
-                placeholder="summary"
+                placeholder={copy.admin.editDrawer.summaryPlaceholder}
               />
             </Field>
-            <Field label="Description">
+            <Field label={copy.admin.editDrawer.description}>
               <textarea
                 className={`${INPUT_CLASS} min-h-24`}
                 value={editTarget.description ?? ''}
                 onChange={(event) => setEditTarget({ ...editTarget, description: event.target.value || null })}
-                placeholder="description"
+                placeholder={copy.admin.editDrawer.descriptionPlaceholder}
                 rows={4}
               />
             </Field>
@@ -471,13 +487,13 @@ export function AdminSkillsPage({
             />
             <div className="sdkwork-surface-drawer-form-actions flex justify-end gap-2">
               <button type="button" className={SECONDARY_BUTTON_CLASS} onClick={() => setEditTarget(null)}>
-                Cancel
+                {copy.admin.editDrawer.cancel}
               </button>
               <button
                 type="submit"
                 className="rounded-md bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-500"
               >
-                Save changes
+                {copy.admin.editDrawer.save}
               </button>
             </div>
           </form>
@@ -486,10 +502,10 @@ export function AdminSkillsPage({
 
       <ConfirmModal
         open={deleteTarget != null}
-        title="Delete skill package?"
-        description={`Delete “${deleteTarget?.displayName ?? ''}”. This cannot be undone.`}
-        confirmLabel="Delete"
-        cancelLabel="Cancel"
+        title={copy.admin.deleteConfirm.title}
+        description={copy.admin.deleteConfirm.description(deleteTarget?.displayName ?? '')}
+        confirmLabel={copy.admin.deleteConfirm.confirm}
+        cancelLabel={copy.admin.deleteConfirm.cancel}
         busy={deleting}
         onCancel={() => setDeleteTarget(null)}
         onConfirm={() => {

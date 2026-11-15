@@ -7,9 +7,11 @@ import {
   useSkillsClients,
   type SkillArtifactRecord,
 } from '@sdkwork/skills-pc-core';
+import { useSkillsAdminCopy } from '@sdkwork/skills-pc-admin';
 import { SurfaceDrawer } from '../components/SurfaceOverlay.tsx';
 
 export function PackageArtifactsPage() {
+  const copy = useSkillsAdminCopy();
   const clients = useSkillsClients();
   const { packageId = '' } = useParams();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -44,7 +46,7 @@ export function PackageArtifactsPage() {
   async function onUploadSelectedFile() {
     const file = fileInputRef.current?.files?.[0];
     if (!file) {
-      setError('Select an artifact archive to upload through sdkwork-drive.');
+      setError(copy.artifacts.errors.selectArchive);
       return;
     }
     setUploading(true);
@@ -69,11 +71,11 @@ export function PackageArtifactsPage() {
     event.preventDefault();
     setError(null);
     if (!isDriveArtifactRef(form.artifactRef)) {
-      setError('Upload an artifact through sdkwork-drive before attaching it.');
+      setError(copy.artifacts.errors.needArtifact);
       return;
     }
     if (!/^[0-9a-f]{64}$/.test(form.checksumSha256)) {
-      setError('The uploaded artifact is missing a valid SHA-256 checksum.');
+      setError(copy.artifacts.errors.checksum);
       return;
     }
     try {
@@ -93,9 +95,9 @@ export function PackageArtifactsPage() {
   return (
     <section className="skills-console-page">
       <header className="skills-console-header" style={{ marginBottom: 0 }}>
-        <h2>Artifacts for Package {packageId}</h2>
+        <h2>{copy.artifacts.title(packageId)}</h2>
         <button type="button" className="skills-console-primary" onClick={() => setCreateOpen(true)}>
-          Attach artifact
+          {copy.artifacts.attach}
         </button>
       </header>
       {error ? <p role="alert">{error}</p> : null}
@@ -103,26 +105,28 @@ export function PackageArtifactsPage() {
         <div className="table-frame">
           {artifacts.length === 0 ? (
             <div className="empty-state">
-              <span>No artifacts attached to this package.</span>
+              <span>{copy.artifacts.empty}</span>
               <button type="button" className="skills-console-primary" onClick={() => setCreateOpen(true)}>
-                Attach artifact
+                {copy.artifacts.attach}
               </button>
             </div>
           ) : (
             <table>
               <thead>
                 <tr>
-                  <th>Version</th>
-                  <th>Status</th>
-                  <th>Invocation</th>
+                  <th>{copy.artifacts.table.version}</th>
+                  <th>{copy.artifacts.table.status}</th>
+                  <th>{copy.artifacts.table.invocation}</th>
                 </tr>
               </thead>
               <tbody>
                 {artifacts.map((item) => (
                   <tr key={item.id}>
                     <td>{item.versionLabel}</td>
-                    <td>{item.status}</td>
-                    <td>{item.invocationKind}</td>
+                    <td>{copy.artifacts.statusLabels[item.status] ?? item.status}</td>
+                    <td>
+                      {copy.artifacts.invocationLabels[item.invocationKind] ?? item.invocationKind}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -132,14 +136,14 @@ export function PackageArtifactsPage() {
       </div>
       <SurfaceDrawer
         open={createOpen}
-        title="Attach artifact"
+        title={copy.artifacts.drawer.title}
         onClose={() => setCreateOpen(false)}
       >
         <form onSubmit={onSubmit} style={{ display: 'grid', gap: 8 }}>
           <input
             value={form.versionLabel}
             onChange={(event) => setForm({ ...form, versionLabel: event.target.value })}
-            placeholder="version label"
+            placeholder={copy.artifacts.drawer.versionLabelPlaceholder}
             required
           />
           <div style={{ display: 'grid', gap: 8 }}>
@@ -149,17 +153,21 @@ export function PackageArtifactsPage() {
               accept=".zip,.tar,.gz,.tgz,.skillpkg,application/zip"
             />
             <button type="button" onClick={onUploadSelectedFile} disabled={uploading}>
-              {uploading ? 'Uploading...' : 'Upload Artifact via sdkwork-drive'}
+              {uploading ? copy.artifacts.drawer.uploading : copy.artifacts.drawer.upload}
             </button>
-            {selectedFileName ? <p>Uploaded file: {selectedFileName}</p> : null}
-            <input value={form.artifactRef} readOnly placeholder="artifactRef (drive://...)" />
+            {selectedFileName ? <p>{copy.artifacts.drawer.uploadedFile(selectedFileName)}</p> : null}
+            <input
+              value={form.artifactRef}
+              readOnly
+              placeholder={copy.artifacts.drawer.artifactRefPlaceholder}
+            />
           </div>
           <div className="sdkwork-surface-drawer-form-actions">
             <button type="button" onClick={() => setCreateOpen(false)}>
-              Cancel
+              {copy.artifacts.drawer.cancel}
             </button>
             <button type="submit" disabled={uploading}>
-              Attach Artifact
+              {copy.artifacts.drawer.submit}
             </button>
           </div>
         </form>

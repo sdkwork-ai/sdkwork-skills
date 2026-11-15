@@ -1,5 +1,7 @@
 import type { ReactNode } from 'react';
 
+import { useSkillsAdminCopy } from '../copy/skillsAdminCopy';
+
 export interface SurfaceDrawerProps {
   open: boolean;
   title: string;
@@ -27,6 +29,7 @@ export function SurfaceDrawer({
   footer,
   size = 'lg',
 }: SurfaceDrawerProps) {
+  const copy = useSkillsAdminCopy();
   if (!open) return null;
   return (
     <div
@@ -36,7 +39,7 @@ export function SurfaceDrawer({
       <button
         type="button"
         className="sdkwork-surface-drawer-backdrop absolute inset-0 cursor-default"
-        aria-label="Close"
+        aria-label={copy.overlay.close}
         onClick={onClose}
       />
       <aside
@@ -58,7 +61,7 @@ export function SurfaceDrawer({
             type="button"
             className="sdkwork-surface-drawer-close rounded p-1 text-lg leading-none text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200"
             onClick={onClose}
-            aria-label="Close"
+            aria-label={copy.overlay.close}
           >
             ×
           </button>
@@ -95,6 +98,7 @@ export function ConfirmModal({
   onConfirm,
   onCancel,
 }: ConfirmModalProps) {
+  const copy = useSkillsAdminCopy();
   if (!open) return null;
   return (
     <div
@@ -104,7 +108,7 @@ export function ConfirmModal({
       <button
         type="button"
         className="sdkwork-surface-drawer-backdrop absolute inset-0 cursor-default"
-        aria-label="Close"
+        aria-label={copy.overlay.close}
         onClick={onCancel}
         disabled={busy}
       />

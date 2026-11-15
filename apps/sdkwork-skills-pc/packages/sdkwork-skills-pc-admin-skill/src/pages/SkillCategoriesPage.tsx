@@ -6,6 +6,7 @@ import {
   updateSkillCategory,
 } from '@sdkwork/skills-pc-admin-core';
 import { useSkillsClients, type SkillCategoryRecord } from '@sdkwork/skills-pc-core';
+import { useSkillsAdminCopy } from '@sdkwork/skills-pc-admin';
 import { SurfaceDrawer } from '../components/SurfaceOverlay.tsx';
 
 /**
@@ -22,11 +23,6 @@ import { SurfaceDrawer } from '../components/SurfaceOverlay.tsx';
  */
 const CATEGORY_TYPES = ['skill_market', 'skills_collection'] as const;
 type CategoryType = (typeof CATEGORY_TYPES)[number];
-
-const CATEGORY_TYPE_LABELS: Record<CategoryType, string> = {
-  skill_market: 'Market',
-  skills_collection: 'Collection',
-};
 
 const INPUT_CLASS =
   'w-full rounded-md border border-zinc-700 bg-zinc-800/60 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-60';
@@ -102,6 +98,7 @@ const EMPTY_CREATE: CreateFormState = {
  *   picker while remaining addressable by packages already filed under it.
  */
 export function SkillCategoriesPage() {
+  const copy = useSkillsAdminCopy();
   const clients = useSkillsClients();
   const [categories, setCategories] = useState<SkillCategoryRecord[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -241,14 +238,13 @@ export function SkillCategoriesPage() {
     <section className="flex flex-col gap-4 p-6">
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="text-lg font-semibold text-zinc-100">Categories</h2>
+          <h2 className="text-lg font-semibold text-zinc-100">{copy.categories.title}</h2>
           <p className="mt-0.5 max-w-2xl text-sm text-zinc-400">
-            Curate the Skill taxonomy. Categories are assigned at creation time and cannot be
-            deleted — retire one by disabling it.
+            {copy.categories.description}
           </p>
         </div>
         <button type="button" className={PRIMARY_BUTTON_CLASS} onClick={openCreate}>
-          Create category
+          {copy.categories.create}
         </button>
       </header>
 
@@ -264,7 +260,7 @@ export function SkillCategoriesPage() {
       <div
         className="inline-flex w-fit gap-1 rounded-lg border border-zinc-800 bg-zinc-900/80 p-1"
         role="tablist"
-        aria-label="Category taxonomy"
+        aria-label={copy.categories.taxonomyAria}
       >
         {CATEGORY_TYPES.map((type) => (
           <button
@@ -279,7 +275,7 @@ export function SkillCategoriesPage() {
             }`}
             onClick={() => setActiveType(type)}
           >
-            {CATEGORY_TYPE_LABELS[type]} ({counts[type]})
+            {copy.categories.types[type]} ({counts[type]})
           </button>
         ))}
       </div>
@@ -288,27 +284,24 @@ export function SkillCategoriesPage() {
         {visibleCategories.length === 0 ? (
           <div className="flex flex-col items-center gap-3 px-6 py-10 text-center">
             <h3 className="text-base font-semibold text-zinc-200">
-              No {CATEGORY_TYPE_LABELS[activeType].toLowerCase()} categories
+              {copy.categories.empty.title(copy.categories.types[activeType])}
             </h3>
-            <p className="max-w-md text-sm text-zinc-400">
-              Create one from the header action, or switch taxonomy above. Packages cannot be
-              filed without a category.
-            </p>
+            <p className="max-w-md text-sm text-zinc-400">{copy.categories.empty.description}</p>
             <button type="button" className={PRIMARY_BUTTON_CLASS} onClick={openCreate}>
-              Create category
+              {copy.categories.empty.create}
             </button>
           </div>
         ) : (
           <table className="w-full text-left text-sm">
             <thead className="bg-zinc-800/60 text-xs uppercase tracking-wide text-zinc-400">
               <tr>
-                <th className="px-3 py-2.5 font-medium">Name</th>
-                <th className="px-3 py-2.5 font-medium">Code</th>
-                <th className="px-3 py-2.5 font-medium">Parent</th>
-                <th className="px-3 py-2.5 font-medium">Permission</th>
-                <th className="px-3 py-2.5 font-medium">Sort</th>
-                <th className="px-3 py-2.5 font-medium">State</th>
-                <th className="px-3 py-2.5 font-medium">Actions</th>
+                <th className="px-3 py-2.5 font-medium">{copy.categories.table.name}</th>
+                <th className="px-3 py-2.5 font-medium">{copy.categories.table.code}</th>
+                <th className="px-3 py-2.5 font-medium">{copy.categories.table.parent}</th>
+                <th className="px-3 py-2.5 font-medium">{copy.categories.table.permission}</th>
+                <th className="px-3 py-2.5 font-medium">{copy.categories.table.sort}</th>
+                <th className="px-3 py-2.5 font-medium">{copy.categories.table.state}</th>
+                <th className="px-3 py-2.5 font-medium">{copy.categories.table.actions}</th>
               </tr>
             </thead>
             <tbody>
@@ -322,12 +315,14 @@ export function SkillCategoriesPage() {
                     <td className="px-3 py-2.5">
                       <code className="font-mono text-xs text-zinc-300">{item.code}</code>
                     </td>
-                    <td className="px-3 py-2.5 text-zinc-400">{parent ? parent.name : '—'}</td>
+                    <td className="px-3 py-2.5 text-zinc-400">
+                      {parent ? parent.name : copy.categories.table.noValue}
+                    </td>
                     <td className="px-3 py-2.5">
                       {item.permissionCode ? (
                         <code className="font-mono text-xs text-zinc-300">{item.permissionCode}</code>
                       ) : (
-                        <span className="text-zinc-500">—</span>
+                        <span className="text-zinc-500">{copy.categories.table.noValue}</span>
                       )}
                     </td>
                     <td className="px-3 py-2.5 text-zinc-400">{item.sortWeight}</td>
@@ -335,21 +330,23 @@ export function SkillCategoriesPage() {
                       {item.status === 1 ? (
                         <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/15 px-2 py-0.5 text-xs font-medium text-emerald-400">
                           <span className="size-1.5 rounded-full bg-emerald-400" />
-                          Enabled
+                          {copy.categories.table.enabled}
                         </span>
                       ) : (
                         <span className="inline-flex items-center gap-1.5 rounded-full bg-zinc-700/60 px-2 py-0.5 text-xs font-medium text-zinc-400">
                           <span className="size-1.5 rounded-full bg-zinc-500" />
-                          Disabled
+                          {copy.categories.table.disabled}
                         </span>
                       )}
                       {!item.visible ? (
-                        <span className="ml-1.5 text-xs text-zinc-500">· hidden</span>
+                        <span className="ml-1.5 text-xs text-zinc-500">
+                          {copy.categories.table.hidden}
+                        </span>
                       ) : null}
                     </td>
                     <td className="px-3 py-2.5">
                       <button type="button" className={SECONDARY_BUTTON_CLASS} onClick={() => openEdit(item)}>
-                        Edit
+                        {copy.categories.table.edit}
                       </button>
                     </td>
                   </tr>
@@ -360,12 +357,16 @@ export function SkillCategoriesPage() {
         )}
       </div>
 
-      <SurfaceDrawer open={createOpen} title="Create category" onClose={() => setCreateOpen(false)}>
+      <SurfaceDrawer
+        open={createOpen}
+        title={copy.categories.drawer.createTitle}
+        onClose={() => setCreateOpen(false)}
+      >
         <form onSubmit={onCreate} className="grid gap-4">
           <label className="grid gap-1.5 text-sm">
-            <span className="text-xs font-medium text-zinc-400">Taxonomy</span>
+            <span className={LABEL_TEXT_CLASS}>{copy.categories.drawer.taxonomy}</span>
             <select
-              className="w-full rounded-md border border-zinc-700 bg-zinc-800/60 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-60"
+              className={INPUT_CLASS}
               value={createForm.categoryType}
               onChange={(event) =>
                 setCreateForm({ ...createForm, categoryType: event.target.value as CategoryType })
@@ -373,15 +374,15 @@ export function SkillCategoriesPage() {
             >
               {CATEGORY_TYPES.map((type) => (
                 <option key={type} value={type}>
-                  {CATEGORY_TYPE_LABELS[type]}
+                  {copy.categories.types[type]}
                 </option>
               ))}
             </select>
           </label>
           <label className="grid gap-1.5 text-sm">
-            <span className="text-xs font-medium text-zinc-400">Code</span>
+            <span className={LABEL_TEXT_CLASS}>{copy.categories.drawer.code}</span>
             <input
-              className="w-full rounded-md border border-zinc-700 bg-zinc-800/60 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-60"
+              className={INPUT_CLASS}
               value={createForm.code}
               onChange={(event) => {
                 const code = event.target.value;
@@ -397,40 +398,38 @@ export function SkillCategoriesPage() {
                       : prev.permissionCode,
                 }));
               }}
-              placeholder="e.g. data-analysis"
+              placeholder={copy.categories.drawer.codePlaceholder}
               required
             />
-            <small className="text-xs text-zinc-500">
-              Immutable after creation; the console resolves the category by this code.
-            </small>
+            <small className="text-xs text-zinc-500">{copy.categories.drawer.codeHint}</small>
           </label>
           <label className="grid gap-1.5 text-sm">
-            <span className="text-xs font-medium text-zinc-400">Name</span>
+            <span className={LABEL_TEXT_CLASS}>{copy.categories.drawer.name}</span>
             <input
-              className="w-full rounded-md border border-zinc-700 bg-zinc-800/60 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-60"
+              className={INPUT_CLASS}
               value={createForm.name}
               onChange={(event) => setCreateForm({ ...createForm, name: event.target.value })}
-              placeholder="e.g. Data analysis"
+              placeholder={copy.categories.drawer.namePlaceholder}
               required
             />
           </label>
           <label className="grid gap-1.5 text-sm">
-            <span className="text-xs font-medium text-zinc-400">Description</span>
+            <span className={LABEL_TEXT_CLASS}>{copy.categories.drawer.description}</span>
             <textarea
-              className="w-full rounded-md border border-zinc-700 bg-zinc-800/60 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-60"
+              className={INPUT_CLASS}
               value={createForm.description}
               onChange={(event) => setCreateForm({ ...createForm, description: event.target.value })}
               rows={3}
             />
           </label>
           <label className="grid gap-1.5 text-sm">
-            <span className="text-xs font-medium text-zinc-400">Parent category</span>
+            <span className={LABEL_TEXT_CLASS}>{copy.categories.drawer.parent}</span>
             <select
-              className="w-full rounded-md border border-zinc-700 bg-zinc-800/60 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-60"
+              className={INPUT_CLASS}
               value={createForm.parentId}
               onChange={(event) => setCreateForm({ ...createForm, parentId: event.target.value })}
             >
-              <option value="">None (top level)</option>
+              <option value="">{copy.categories.drawer.parentNone}</option>
               {categories
                 .filter((item) => (item.categoryType ?? 'skill_market') === createForm.categoryType)
                 .map((item) => (
@@ -441,9 +440,9 @@ export function SkillCategoriesPage() {
             </select>
           </label>
           <label className="grid gap-1.5 text-sm">
-            <span className="text-xs font-medium text-zinc-400">Sort weight</span>
+            <span className={LABEL_TEXT_CLASS}>{copy.categories.drawer.sortWeight}</span>
             <input
-              className="w-full rounded-md border border-zinc-700 bg-zinc-800/60 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-60"
+              className={INPUT_CLASS}
               type="number"
               value={createForm.sortWeight}
               onChange={(event) =>
@@ -451,14 +450,14 @@ export function SkillCategoriesPage() {
               }
             />
             <small className="text-xs text-zinc-500">
-              Lower sorts first in the console picker.
+              {copy.categories.drawer.sortWeightHint}
             </small>
           </label>
           {createForm.categoryType === 'skill_market' ? (
             <label className="grid gap-1.5 text-sm">
-              <span className="text-xs font-medium text-zinc-400">Permission code</span>
+              <span className={LABEL_TEXT_CLASS}>{copy.categories.drawer.permission}</span>
               <input
-              className="w-full rounded-md border border-zinc-700 bg-zinc-800/60 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-60"
+                className={INPUT_CLASS}
                 value={createForm.permissionCode}
                 onChange={(event) =>
                   setCreateForm({ ...createForm, permissionCode: event.target.value })
@@ -466,14 +465,14 @@ export function SkillCategoriesPage() {
                 placeholder={defaultPermissionCode(createForm.code || 'category')}
               />
               <small className="text-xs text-zinc-500">
-                Granted to operators who manage packages in this category.
+                {copy.categories.drawer.permissionHint}
               </small>
             </label>
           ) : null}
           <label className="grid gap-1.5 text-sm">
-            <span className="text-xs font-medium text-zinc-400">Status</span>
+            <span className={LABEL_TEXT_CLASS}>{copy.categories.drawer.status}</span>
             <select
-              className="w-full rounded-md border border-zinc-700 bg-zinc-800/60 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-60"
+              className={INPUT_CLASS}
               value={createForm.status}
               onChange={(event) =>
                 setCreateForm({
@@ -482,12 +481,12 @@ export function SkillCategoriesPage() {
                 })
               }
             >
-              <option value={1}>Enabled</option>
-              <option value={0}>Disabled</option>
+              <option value={1}>{copy.categories.drawer.statusEnabled}</option>
+              <option value={0}>{copy.categories.drawer.statusDisabled}</option>
             </select>
           </label>
           <label className="grid gap-1.5 text-sm">
-            <span className="text-xs font-medium text-zinc-400">Visible in the console</span>
+            <span className={LABEL_TEXT_CLASS}>{copy.categories.drawer.visible}</span>
             <input
               className="size-4 rounded border-zinc-600 bg-zinc-800"
               type="checkbox"
@@ -497,10 +496,10 @@ export function SkillCategoriesPage() {
           </label>
           <div className="sdkwork-surface-drawer-form-actions mt-2 flex justify-end gap-2">
             <button type="button" onClick={() => setCreateOpen(false)} disabled={submitting}>
-              Cancel
+              {copy.categories.drawer.cancel}
             </button>
             <button type="submit" disabled={submitting}>
-              Create category
+              {copy.categories.drawer.create}
             </button>
           </div>
         </form>
@@ -508,53 +507,57 @@ export function SkillCategoriesPage() {
 
       <SurfaceDrawer
         open={editTarget != null}
-        title={editTarget ? `Edit ${editTarget.name}` : 'Edit category'}
+        title={
+          editTarget
+            ? copy.categories.drawer.editTitle(editTarget.name)
+            : copy.categories.drawer.editFallbackTitle
+        }
         onClose={() => setEditTarget(null)}
       >
         {editTarget ? (
           <form onSubmit={onUpdate} className="grid gap-4">
             <label className="grid gap-1.5 text-sm">
-              <span className="text-xs font-medium text-zinc-400">Code</span>
+              <span className={LABEL_TEXT_CLASS}>{copy.categories.drawer.code}</span>
               <input className="w-full rounded-md border border-zinc-700 bg-zinc-800/60 px-3 py-2 text-sm text-zinc-100 disabled:opacity-60" value={editTarget.code} readOnly disabled />
               <small className="text-xs text-zinc-500">
-                Immutable after creation. To rename, retire this category and create a new one.
+                {copy.categories.drawer.codeEditHint}
               </small>
             </label>
             <label className="grid gap-1.5 text-sm">
-              <span className="text-xs font-medium text-zinc-400">Taxonomy</span>
+              <span className={LABEL_TEXT_CLASS}>{copy.categories.drawer.taxonomy}</span>
               <input
-              className="w-full rounded-md border border-zinc-700 bg-zinc-800/60 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-60"
-                value={CATEGORY_TYPE_LABELS[(editTarget.categoryType ?? 'skill_market') as CategoryType]}
+                className={INPUT_CLASS}
+                value={copy.categories.types[(editTarget.categoryType ?? 'skill_market') as CategoryType]}
                 readOnly
                 disabled
               />
             </label>
             <label className="grid gap-1.5 text-sm">
-              <span className="text-xs font-medium text-zinc-400">Name</span>
+              <span className={LABEL_TEXT_CLASS}>{copy.categories.drawer.name}</span>
               <input
-              className="w-full rounded-md border border-zinc-700 bg-zinc-800/60 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-60"
+                className={INPUT_CLASS}
                 value={editForm.name}
                 onChange={(event) => setEditForm({ ...editForm, name: event.target.value })}
                 required
               />
             </label>
             <label className="grid gap-1.5 text-sm">
-              <span className="text-xs font-medium text-zinc-400">Description</span>
+              <span className={LABEL_TEXT_CLASS}>{copy.categories.drawer.description}</span>
               <textarea
-              className="w-full rounded-md border border-zinc-700 bg-zinc-800/60 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-60"
+                className={INPUT_CLASS}
                 value={editForm.description}
                 onChange={(event) => setEditForm({ ...editForm, description: event.target.value })}
                 rows={3}
               />
             </label>
             <label className="grid gap-1.5 text-sm">
-              <span className="text-xs font-medium text-zinc-400">Parent category</span>
+              <span className={LABEL_TEXT_CLASS}>{copy.categories.drawer.parent}</span>
               <select
-              className="w-full rounded-md border border-zinc-700 bg-zinc-800/60 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-60"
+                className={INPUT_CLASS}
                 value={editForm.parentId}
                 onChange={(event) => setEditForm({ ...editForm, parentId: event.target.value })}
               >
-                <option value="">None (top level)</option>
+                <option value="">{copy.categories.drawer.parentNone}</option>
                 {parentOptions.map((item) => (
                   <option key={item.id} value={item.id}>
                     {item.name}
@@ -563,9 +566,9 @@ export function SkillCategoriesPage() {
               </select>
             </label>
             <label className="grid gap-1.5 text-sm">
-              <span className="text-xs font-medium text-zinc-400">Sort weight</span>
+              <span className={LABEL_TEXT_CLASS}>{copy.categories.drawer.sortWeight}</span>
               <input
-              className="w-full rounded-md border border-zinc-700 bg-zinc-800/60 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-60"
+                className={INPUT_CLASS}
                 type="number"
                 value={editForm.sortWeight}
                 onChange={(event) =>
@@ -574,35 +577,35 @@ export function SkillCategoriesPage() {
               />
             </label>
             <label className="grid gap-1.5 text-sm">
-              <span className="text-xs font-medium text-zinc-400">Permission code</span>
+              <span className={LABEL_TEXT_CLASS}>{copy.categories.drawer.permission}</span>
               <input
-              className="w-full rounded-md border border-zinc-700 bg-zinc-800/60 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-60"
+                className={INPUT_CLASS}
                 value={editForm.permissionCode}
                 onChange={(event) =>
                   setEditForm({ ...editForm, permissionCode: event.target.value })
                 }
               />
               <small className="text-xs text-zinc-500">
-                Editable — the write contract carries this field even though the code is fixed.
+                {copy.categories.drawer.permissionEditHint}
               </small>
             </label>
             <label className="grid gap-1.5 text-sm">
-              <span className="text-xs font-medium text-zinc-400">Status</span>
+              <span className={LABEL_TEXT_CLASS}>{copy.categories.drawer.status}</span>
               <select
-              className="w-full rounded-md border border-zinc-700 bg-zinc-800/60 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-60"
+                className={INPUT_CLASS}
                 value={editForm.status}
                 onChange={(event) =>
                   setEditForm({ ...editForm, status: Number(event.target.value) === 0 ? 0 : 1 })
                 }
               >
-                <option value={1}>Enabled</option>
-                <option value={0}>Disabled</option>
+                <option value={1}>{copy.categories.drawer.statusEnabled}</option>
+                <option value={0}>{copy.categories.drawer.statusDisabled}</option>
               </select>
             </label>
             <label className="grid gap-1.5 text-sm">
-              <span className="text-xs font-medium text-zinc-400">Visible in the console</span>
+              <span className={LABEL_TEXT_CLASS}>{copy.categories.drawer.visible}</span>
               <input
-              className="size-4 rounded border-zinc-600 bg-zinc-800"
+                className="size-4 rounded border-zinc-600 bg-zinc-800"
                 type="checkbox"
                 checked={editForm.visible}
                 onChange={(event) => setEditForm({ ...editForm, visible: event.target.checked })}
@@ -610,10 +613,10 @@ export function SkillCategoriesPage() {
             </label>
             <div className="sdkwork-surface-drawer-form-actions mt-2 flex justify-end gap-2">
               <button type="button" onClick={() => setEditTarget(null)} disabled={submitting}>
-                Cancel
+                {copy.categories.drawer.cancel}
               </button>
               <button type="submit" disabled={submitting}>
-                Save changes
+                {copy.categories.drawer.save}
               </button>
             </div>
           </form>

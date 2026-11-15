@@ -6,17 +6,19 @@ import {
   type SkillCapabilityRecord,
 } from '@sdkwork/skills-pc-admin-core';
 import { useSkillsClients } from '@sdkwork/skills-pc-core';
+import { useSkillsAdminCopy } from '@sdkwork/skills-pc-admin';
 import { SurfaceDrawer } from '../components/SurfaceOverlay.tsx';
 
 export function SkillCapabilitiesPage() {
+  const copy = useSkillsAdminCopy();
   const clients = useSkillsClients();
   const [capabilities, setCapabilities] = useState<SkillCapabilityRecord[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
   const [form, setForm] = useState({
     capabilityKey: 'capability.basic.run',
-    displayName: 'Basic Run',
-    description: 'Standard capability',
+    displayName: copy.capabilities.defaults.displayName,
+    description: copy.capabilities.defaults.description,
     riskLevel: 'standard' as 'standard' | 'sensitive' | 'privileged',
   });
 
@@ -36,8 +38,8 @@ export function SkillCapabilitiesPage() {
       await createSkillCapability(clients, form);
       setForm({
         capabilityKey: 'capability.basic.run',
-        displayName: 'Basic Run',
-        description: 'Standard capability',
+        displayName: copy.capabilities.defaults.displayName,
+        description: copy.capabilities.defaults.description,
         riskLevel: 'standard',
       });
       setCreateOpen(false);
@@ -66,9 +68,9 @@ export function SkillCapabilitiesPage() {
   return (
     <section className="skills-console-page">
       <header className="skills-console-header" style={{ marginBottom: 0 }}>
-        <h2>Skill Capabilities</h2>
+        <h2>{copy.capabilities.title}</h2>
         <button type="button" className="skills-console-primary" onClick={() => setCreateOpen(true)}>
-          Create capability
+          {copy.capabilities.create}
         </button>
       </header>
       {error ? <p role="alert">{error}</p> : null}
@@ -76,18 +78,18 @@ export function SkillCapabilitiesPage() {
         <div className="table-frame">
           {capabilities.length === 0 ? (
             <div className="empty-state">
-              <span>No capability definitions yet.</span>
+              <span>{copy.capabilities.empty}</span>
               <button type="button" className="skills-console-primary" onClick={() => setCreateOpen(true)}>
-                Create capability
+                {copy.capabilities.create}
               </button>
             </div>
           ) : (
             <table>
               <thead>
                 <tr>
-                  <th>Name</th>
-                  <th>Key</th>
-                  <th>Risk</th>
+                  <th>{copy.capabilities.table.name}</th>
+                  <th>{copy.capabilities.table.key}</th>
+                  <th>{copy.capabilities.table.risk}</th>
                 </tr>
               </thead>
               <tbody>
@@ -105,9 +107,9 @@ export function SkillCapabilitiesPage() {
                           )
                         }
                       >
-                        <option value="standard">standard</option>
-                        <option value="sensitive">sensitive</option>
-                        <option value="privileged">privileged</option>
+                        <option value="standard">{copy.capabilities.risk.standard}</option>
+                        <option value="sensitive">{copy.capabilities.risk.sensitive}</option>
+                        <option value="privileged">{copy.capabilities.risk.privileged}</option>
                       </select>
                     </td>
                   </tr>
@@ -119,20 +121,20 @@ export function SkillCapabilitiesPage() {
       </div>
       <SurfaceDrawer
         open={createOpen}
-        title="Create capability"
+        title={copy.capabilities.drawer.title}
         onClose={() => setCreateOpen(false)}
       >
         <form onSubmit={onSubmit} style={{ display: 'grid', gap: 8 }}>
           <input
             value={form.capabilityKey}
             onChange={(event) => setForm({ ...form, capabilityKey: event.target.value })}
-            placeholder="capability key"
+            placeholder={copy.capabilities.drawer.capabilityKeyPlaceholder}
             required
           />
           <input
             value={form.displayName}
             onChange={(event) => setForm({ ...form, displayName: event.target.value })}
-            placeholder="display name"
+            placeholder={copy.capabilities.drawer.displayNamePlaceholder}
             required
           />
           <select
@@ -141,15 +143,15 @@ export function SkillCapabilitiesPage() {
               setForm({ ...form, riskLevel: event.target.value as typeof form.riskLevel })
             }
           >
-            <option value="standard">standard</option>
-            <option value="sensitive">sensitive</option>
-            <option value="privileged">privileged</option>
+            <option value="standard">{copy.capabilities.risk.standard}</option>
+            <option value="sensitive">{copy.capabilities.risk.sensitive}</option>
+            <option value="privileged">{copy.capabilities.risk.privileged}</option>
           </select>
           <div className="sdkwork-surface-drawer-form-actions">
             <button type="button" onClick={() => setCreateOpen(false)}>
-              Cancel
+              {copy.capabilities.drawer.cancel}
             </button>
-            <button type="submit">Create Capability</button>
+            <button type="submit">{copy.capabilities.drawer.submit}</button>
           </div>
         </form>
       </SurfaceDrawer>

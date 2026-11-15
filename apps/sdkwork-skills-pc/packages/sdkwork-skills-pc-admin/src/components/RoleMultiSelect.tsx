@@ -1,5 +1,7 @@
 import { SKILLS_ASSIGNABLE_ROLES, type SkillsAssignableRole } from '@sdkwork/skills-pc-admin-core';
 
+import { useSkillsAdminCopy } from '../copy/skillsAdminCopy';
+
 /**
  * Multi-select for the IAM roles a Skill package is assigned to.
  *
@@ -17,14 +19,16 @@ export function RoleMultiSelect({
   onChange: (next: string[]) => void;
   disabled?: boolean;
 }) {
+  const copy = useSkillsAdminCopy();
   const selected = new Set(value);
   const allRoles = value.length === 0;
   const known = new Set(SKILLS_ASSIGNABLE_ROLES.map((role) => role.code));
   const extras: SkillsAssignableRole[] = [...selected]
     .filter((code) => !known.has(code))
     .sort()
-    .map((code) => ({ code, label: 'Custom role' }));
+    .map((code) => ({ code, label: copy.roles.customRole }));
   const roles = [...SKILLS_ASSIGNABLE_ROLES, ...extras];
+  const localizedLabels: Record<string, string> = copy.roles.labels;
 
   return (
     <fieldset
@@ -32,7 +36,7 @@ export function RoleMultiSelect({
       className="rounded-lg border border-zinc-700 bg-zinc-800/40 p-3"
     >
       <legend className="px-1 text-xs font-medium uppercase tracking-wide text-zinc-400">
-        Visible to roles
+        {copy.roles.legend}
       </legend>
       <div className="grid gap-1.5">
         <label className="flex items-center gap-2 text-sm font-medium text-zinc-200">
@@ -42,7 +46,7 @@ export function RoleMultiSelect({
             onChange={() => onChange([])}
             className="size-4 rounded border-zinc-600 bg-zinc-800"
           />
-          <span>All roles (default)</span>
+          <span>{copy.roles.allRoles}</span>
         </label>
         {roles.map((role) => (
           <label key={role.code} className="flex items-center gap-2 text-sm text-zinc-300">
@@ -61,7 +65,7 @@ export function RoleMultiSelect({
               className="size-4 rounded border-zinc-600 bg-zinc-800"
             />
             <span>
-              {role.label} (<code className="font-mono text-xs text-zinc-400">{role.code}</code>)
+              {localizedLabels[role.code] ?? role.label} (<code className="font-mono text-xs text-zinc-400">{role.code}</code>)
             </span>
           </label>
         ))}
