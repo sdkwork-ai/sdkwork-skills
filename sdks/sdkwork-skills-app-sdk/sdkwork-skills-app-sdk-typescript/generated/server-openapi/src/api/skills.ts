@@ -40,6 +40,7 @@ export interface SkillsSkillCategoriesListParams {
   pageSize?: number;
   cursor?: string;
   q?: string;
+  categoryType?: 'skill_market' | 'skills_collection';
 }
 
 export class SkillsSkillCategoriesApi {
@@ -57,6 +58,7 @@ export class SkillsSkillCategoriesApi {
       { name: 'page_size', value: params?.pageSize, style: 'form', explode: true, allowReserved: false },
       { name: 'cursor', value: params?.cursor, style: 'form', explode: true, allowReserved: false },
       { name: 'q', value: params?.q, style: 'form', explode: true, allowReserved: false },
+      { name: 'category_type', value: params?.categoryType, style: 'form', explode: true, allowReserved: false },
     ]);
     return this.client.request<SkillCategoriesPageData>(appendQueryString(appApiPath(`/skill_categories`), query), { ...(requestOptions?.signal !== undefined ? { signal: requestOptions.signal } : {}), ...(requestOptions?.timeout !== undefined ? { timeout: requestOptions.timeout } : {}), method: 'GET' as any, sdkworkUnwrapKind: 'page' });
   }
@@ -140,6 +142,8 @@ export interface SkillsSkillPackagesListParams {
   pageSize?: number;
   cursor?: string;
   q?: string;
+  categoryCode?: string;
+  roleCodes?: string;
 }
 
 export class SkillsSkillPackagesApi {
@@ -163,6 +167,8 @@ export class SkillsSkillPackagesApi {
       { name: 'page_size', value: params?.pageSize, style: 'form', explode: true, allowReserved: false },
       { name: 'cursor', value: params?.cursor, style: 'form', explode: true, allowReserved: false },
       { name: 'q', value: params?.q, style: 'form', explode: true, allowReserved: false },
+      { name: 'category_code', value: params?.categoryCode, style: 'form', explode: true, allowReserved: false },
+      { name: 'role_codes', value: params?.roleCodes, style: 'form', explode: true, allowReserved: false },
     ]);
     return this.client.request<SkillPackagesPageData>(appendQueryString(appApiPath(`/skill_packages`), query), { ...(requestOptions?.signal !== undefined ? { signal: requestOptions.signal } : {}), ...(requestOptions?.timeout !== undefined ? { timeout: requestOptions.timeout } : {}), method: 'GET' as any, sdkworkUnwrapKind: 'page' });
   }
@@ -193,6 +199,8 @@ export interface SkillsMarketplaceListParams {
   pageSize?: number;
   cursor?: string;
   q?: string;
+  categoryCode?: string;
+  roleCodes?: string;
 }
 
 export class SkillsMarketplaceApi {
@@ -210,6 +218,8 @@ export class SkillsMarketplaceApi {
       { name: 'page_size', value: params?.pageSize, style: 'form', explode: true, allowReserved: false },
       { name: 'cursor', value: params?.cursor, style: 'form', explode: true, allowReserved: false },
       { name: 'q', value: params?.q, style: 'form', explode: true, allowReserved: false },
+      { name: 'category_code', value: params?.categoryCode, style: 'form', explode: true, allowReserved: false },
+      { name: 'role_codes', value: params?.roleCodes, style: 'form', explode: true, allowReserved: false },
     ]);
     return this.client.request<SkillsPageData>(appendQueryString(appApiPath(`/skills`), query), { ...(requestOptions?.signal !== undefined ? { signal: requestOptions.signal } : {}), ...(requestOptions?.timeout !== undefined ? { timeout: requestOptions.timeout } : {}), method: 'GET' as any, sdkworkUnwrapKind: 'page' });
   }

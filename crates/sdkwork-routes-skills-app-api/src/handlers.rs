@@ -14,7 +14,7 @@ use sdkwork_routes_skills_common::{
     list_installations, list_marketplace_skill_packages, list_owned_skill_packages, ok_json,
     parse_resource_id, update_skill_package, ApiProblem, CreateSkillArtifactCommand,
     CreateSkillInstallationCommand, CreateSkillPackageCommand, SdkWorkListQuery,
-    SkillInstallationListQuery, UpdateOwnSkillPackageCommand,
+    SkillCategoryListQuery, SkillInstallationListQuery, UpdateOwnSkillPackageCommand,
 };
 use sdkwork_skills_contract::{
     SkillCategoryType, SkillInstallationSubjectKind, SkillPackageRecord, PERM_INSTALLATIONS_MANAGE,
@@ -304,18 +304,24 @@ pub(crate) async fn list_skill_categories<R>(
     ctx: WebRequestContext,
     State(state): State<AppState<R>>,
     Extension(context): Extension<SkillsAppRequestContext>,
-    Query(query): Query<SdkWorkListQuery>,
+    Query(query): Query<SkillCategoryListQuery>,
 ) -> Response
 where
     R: SkillsRepository + Send + Sync,
 {
+    let category_type = query
+        .category_type
+        .unwrap_or(SkillCategoryType::SkillMarket);
     finish_api_json(
         &ctx,
         list_categories(
             state.service.as_ref(),
             context.tenant_id,
-            SkillCategoryType::SkillMarket.as_str(),
-            &query,
+            category_type.as_str(),
+            // The end-user catalog hides categories the registry marks hidden
+            // or inactive; the backend admin list keeps returning them.
+            true,
+            &query.pagination,
         )
         .await,
     )

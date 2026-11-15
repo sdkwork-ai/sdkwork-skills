@@ -68,6 +68,26 @@
               "type": "string",
               "maxLength": 256
             }
+          },
+          {
+            "name": "category_code",
+            "in": "query",
+            "required": false,
+            "description": "One skill category code from the registered taxonomy. Omit it, or send `all`, to keep every category.",
+            "schema": {
+              "type": "string",
+              "maxLength": 128
+            }
+          },
+          {
+            "name": "role_codes",
+            "in": "query",
+            "required": false,
+            "description": "Comma-separated IAM role codes of the signed-in caller, used as the catalog's role scope. An empty value keeps the all-data view; a value keeps records naming one of these roles plus the records open to every role.",
+            "schema": {
+              "type": "string",
+              "maxLength": 1024
+            }
           }
         ],
         "responses": {
@@ -332,6 +352,26 @@
             "schema": {
               "type": "string",
               "maxLength": 256
+            }
+          },
+          {
+            "name": "category_code",
+            "in": "query",
+            "required": false,
+            "description": "One skill category code from the registered taxonomy. Omit it, or send `all`, to keep every category.",
+            "schema": {
+              "type": "string",
+              "maxLength": 128
+            }
+          },
+          {
+            "name": "role_codes",
+            "in": "query",
+            "required": false,
+            "description": "Comma-separated IAM role codes of the signed-in caller, used as the catalog's role scope. An empty value keeps the all-data view; a value keeps records naming one of these roles plus the records open to every role.",
+            "schema": {
+              "type": "string",
+              "maxLength": 1024
             }
           }
         ],
@@ -1393,6 +1433,18 @@
             "schema": {
               "type": "string",
               "maxLength": 256
+            }
+          },
+          {
+            "name": "category_type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "skill_market",
+                "skills_collection"
+              ]
             }
           }
         ],

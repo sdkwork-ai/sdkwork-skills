@@ -38,6 +38,7 @@ pub async fn list_hub_skills<R: SkillsRepository>(
 ) -> ApiResult<SdkWorkPageData<SkillRecord>> {
     query.validate()?;
     let params = query.offset_params()?;
+    let filter = query.catalog_filter();
     let (items, total) = service
         .list_hub_skills_page(
             tenant_id,
@@ -45,6 +46,7 @@ pub async fn list_hub_skills<R: SkillsRepository>(
             user_id,
             params,
             query.search_keyword(),
+            &filter,
         )
         .await?;
     Ok(offset_list_page_data(items, total, params))
@@ -71,8 +73,9 @@ pub async fn list_skill_packages<R: SkillsRepository>(
 ) -> ApiResult<SdkWorkPageData<SkillPackageRecord>> {
     query.validate()?;
     let params = query.offset_params()?;
+    let filter = query.catalog_filter();
     let (items, total) = service
-        .list_skill_packages_page(tenant_id, params, query.search_keyword())
+        .list_skill_packages_page(tenant_id, params, query.search_keyword(), &filter)
         .await?;
     Ok(offset_list_page_data(items, total, params))
 }
@@ -110,6 +113,7 @@ pub async fn list_marketplace_skill_packages<R: SkillsRepository>(
 ) -> ApiResult<SdkWorkPageData<SkillPackageRecord>> {
     query.validate()?;
     let params = query.offset_params()?;
+    let filter = query.catalog_filter();
     let (items, total) = service
         .list_marketplace_skill_packages_page(
             tenant_id,
@@ -117,6 +121,7 @@ pub async fn list_marketplace_skill_packages<R: SkillsRepository>(
             user_id,
             params,
             query.search_keyword(),
+            &filter,
         )
         .await?;
     Ok(offset_list_page_data(items, total, params))
@@ -168,12 +173,19 @@ pub async fn list_categories<R: SkillsRepository>(
     service: &SkillsService<R>,
     tenant_id: u64,
     category_type: &str,
+    visible_only: bool,
     query: &SdkWorkListQuery,
 ) -> ApiResult<SdkWorkPageData<SkillCategoryRecord>> {
     query.validate()?;
     let params = query.offset_params()?;
     let (items, total) = service
-        .list_categories_page(tenant_id, category_type, params, query.search_keyword())
+        .list_categories_page(
+            tenant_id,
+            category_type,
+            params,
+            query.search_keyword(),
+            visible_only,
+        )
         .await?;
     Ok(offset_list_page_data(items, total, params))
 }

@@ -5,8 +5,9 @@ mod validation_tests;
 
 use async_trait::async_trait;
 use sdkwork_skills_contract::{
-    SkillArtifactRecord, SkillArtifactStatus, SkillCapabilityRecord, SkillCategoryRecord,
-    SkillInstallationRecord, SkillLifecycleStatus, SkillPackageRecord, SkillRecord,
+    SkillArtifactRecord, SkillArtifactStatus, SkillCapabilityRecord, SkillCatalogFilter,
+    SkillCategoryRecord, SkillInstallationRecord, SkillLifecycleStatus, SkillPackageRecord,
+    SkillRecord,
 };
 use sdkwork_utils_rust::OffsetListPageParams;
 use thiserror::Error;
@@ -32,6 +33,7 @@ pub trait SkillsRepository: Send + Sync {
         tenant_id: u64,
         params: OffsetListPageParams,
         keyword: Option<&str>,
+        filter: &SkillCatalogFilter,
     ) -> SkillsResult<(Vec<SkillPackageRecord>, i64)>;
     async fn list_owned_skill_packages_page(
         &self,
@@ -52,6 +54,7 @@ pub trait SkillsRepository: Send + Sync {
         user_id: u64,
         params: OffsetListPageParams,
         keyword: Option<&str>,
+        filter: &SkillCatalogFilter,
     ) -> SkillsResult<(Vec<SkillPackageRecord>, i64)>;
     async fn get_marketplace_skill_package(
         &self,
@@ -78,6 +81,7 @@ pub trait SkillsRepository: Send + Sync {
         user_id: u64,
         params: OffsetListPageParams,
         keyword: Option<&str>,
+        filter: &SkillCatalogFilter,
     ) -> SkillsResult<(Vec<SkillRecord>, i64)>;
     async fn get_skill(
         &self,
@@ -98,6 +102,7 @@ pub trait SkillsRepository: Send + Sync {
         category_type: &str,
         params: OffsetListPageParams,
         keyword: Option<&str>,
+        visible_only: bool,
     ) -> SkillsResult<(Vec<SkillCategoryRecord>, i64)>;
     async fn upsert_category(
         &self,
@@ -170,9 +175,10 @@ impl<R: SkillsRepository> SkillsService<R> {
         user_id: u64,
         params: OffsetListPageParams,
         keyword: Option<&str>,
+        filter: &SkillCatalogFilter,
     ) -> SkillsResult<(Vec<SkillRecord>, i64)> {
         self.repository
-            .list_skills_page(tenant_id, organization_id, user_id, params, keyword)
+            .list_skills_page(tenant_id, organization_id, user_id, params, keyword, filter)
             .await
     }
 
@@ -194,9 +200,10 @@ impl<R: SkillsRepository> SkillsService<R> {
         tenant_id: u64,
         params: OffsetListPageParams,
         keyword: Option<&str>,
+        filter: &SkillCatalogFilter,
     ) -> SkillsResult<(Vec<SkillPackageRecord>, i64)> {
         self.repository
-            .list_skill_packages_page(tenant_id, params, keyword)
+            .list_skill_packages_page(tenant_id, params, keyword, filter)
             .await
     }
 
@@ -229,6 +236,7 @@ impl<R: SkillsRepository> SkillsService<R> {
         user_id: u64,
         params: OffsetListPageParams,
         keyword: Option<&str>,
+        filter: &SkillCatalogFilter,
     ) -> SkillsResult<(Vec<SkillPackageRecord>, i64)> {
         self.repository
             .list_marketplace_skill_packages_page(
@@ -237,6 +245,7 @@ impl<R: SkillsRepository> SkillsService<R> {
                 user_id,
                 params,
                 keyword,
+                filter,
             )
             .await
     }
@@ -320,9 +329,10 @@ impl<R: SkillsRepository> SkillsService<R> {
         category_type: &str,
         params: OffsetListPageParams,
         keyword: Option<&str>,
+        visible_only: bool,
     ) -> SkillsResult<(Vec<SkillCategoryRecord>, i64)> {
         self.repository
-            .list_categories_page(tenant_id, category_type, params, keyword)
+            .list_categories_page(tenant_id, category_type, params, keyword, visible_only)
             .await
     }
 

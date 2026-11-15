@@ -4,7 +4,7 @@ use sdkwork_database_id::SnowflakeIdGenerator;
 use sdkwork_intelligence_skills_service::{SkillsService, SkillsServiceError};
 use sdkwork_skills_contract::{
     SkillArtifactRecord, SkillArtifactSource, SkillArtifactStatus, SkillCapabilityRecord,
-    SkillCapabilityRiskLevel, SkillCategoryRecord, SkillInstallationRecord,
+    SkillCapabilityRiskLevel, SkillCatalogFilter, SkillCategoryRecord, SkillInstallationRecord,
     SkillInstallationSubjectKind, SkillInvocationKind, SkillLifecycleStatus, SkillPackageRecord,
     SkillVisibility,
 };
@@ -265,14 +265,21 @@ async fn verify_marketplace_and_subject_installations(
     assert_eq!(first.categories, vec!["coding"]);
 
     let (packages, package_total) = service
-        .list_skill_packages_page(tenant_id, page(1, 1), None)
+        .list_skill_packages_page(tenant_id, page(1, 1), None, &SkillCatalogFilter::default())
         .await
         .expect("list package page");
     assert_eq!(packages.len(), 1);
     assert_eq!(package_total, 2);
 
     let (skills, skill_total) = service
-        .list_hub_skills_page(tenant_id, 17, 23, page(1, 10), Some("skill"))
+        .list_hub_skills_page(
+            tenant_id,
+            17,
+            23,
+            page(1, 10),
+            Some("skill"),
+            &SkillCatalogFilter::default(),
+        )
         .await
         .expect("list marketplace skills");
     assert_eq!(skills.len(), 2);
@@ -655,6 +662,179 @@ async fn verify_concurrent_installation(
     assert_eq!(install_count, 1);
 }
 
+fn catalog_category(tenant_id: u64, code: &str, visible: bool, status: i16) -> SkillCategoryRecord {
+    SkillCategoryRecord {
+        code: code.to_string(),
+        name: code.to_string(),
+        visible,
+        status,
+        ..category(tenant_id)
+    }
+}
+
+async fn verify_catalog_view_filters(service: &SkillsService<SqlxSkillsRepository>) {
+    let tenant_id = 29;
+    let organization_id = 17;
+    let user_id = 23;
+
+    for (code, visible, status) in [
+        ("coding", true, 1),
+        ("writing", true, 1),
+        ("archived-category", false, 1),
+        ("disabled-category", true, 0),
+    ] {
+        service
+            .create_category(catalog_category(tenant_id, code, visible, status))
+            .await
+            .expect("create catalog category");
+    }
+    service
+        .create_capability(capability(tenant_id))
+        .await
+        .expect("create catalog capability");
+
+    let mut coding_package = package(tenant_id, "catalog-coding");
+    coding_package.categories = vec!["coding".to_string()];
+    service
+        .create_skill_package(coding_package, artifact(tenant_id, 0, "1.0.0"))
+        .await
+        .expect("create coding package");
+
+    let mut writing_package = package(tenant_id, "catalog-writing");
+    writing_package.categories = vec!["writing".to_string()];
+    service
+        .create_skill_package(writing_package, artifact(tenant_id, 0, "1.0.0"))
+        .await
+        .expect("create writing package");
+
+    let mut finance_package = package(tenant_id, "catalog-finance");
+    finance_package.categories = vec!["coding".to_string()];
+    finance_package.allowed_role_codes = vec!["org_finance".to_string()];
+    service
+        .create_skill_package(finance_package, artifact(tenant_id, 0, "1.0.0"))
+        .await
+        .expect("create role restricted package");
+
+    let all_data = SkillCatalogFilter::default();
+    let (_, all_total) = service
+        .list_skill_packages_page(tenant_id, page(1, 10), None, &all_data)
+        .await
+        .expect("list every package");
+    assert_eq!(all_total, 3);
+
+    let coding_only = SkillCatalogFilter::from_query(Some("coding"), None);
+    let (coding_packages, coding_total) = service
+        .list_skill_packages_page(tenant_id, page(1, 10), None, &coding_only)
+        .await
+        .expect("list coding packages");
+    assert_eq!(coding_total, 2);
+    assert!(coding_packages
+        .iter()
+        .all(|item| item.categories == vec!["coding".to_string()]));
+
+    let (_, coding_upper_total) = service
+        .list_skill_packages_page(
+            tenant_id,
+            page(1, 10),
+            None,
+            &SkillCatalogFilter::from_query(Some("CODING"), None),
+        )
+        .await
+        .expect("list coding packages with a case-insensitive selector");
+    assert_eq!(coding_upper_total, 2);
+
+    let operations_scope = SkillCatalogFilter::from_query(None, Some("org_operations"));
+    let (operations_packages, operations_total) = service
+        .list_skill_packages_page(tenant_id, page(1, 10), None, &operations_scope)
+        .await
+        .expect("list packages inside the operations role scope");
+    assert_eq!(operations_total, 2);
+    assert!(operations_packages
+        .iter()
+        .all(|item| item.allowed_role_codes.is_empty()));
+
+    let (_, finance_total) = service
+        .list_skill_packages_page(
+            tenant_id,
+            page(1, 10),
+            None,
+            &SkillCatalogFilter::from_query(None, Some("ORG_FINANCE")),
+        )
+        .await
+        .expect("list packages inside the finance role scope");
+    assert_eq!(finance_total, 3);
+
+    let combined = SkillCatalogFilter::from_query(Some("coding"), Some("org_operations"));
+    let (combined_packages, combined_total) = service
+        .list_skill_packages_page(tenant_id, page(1, 10), None, &combined)
+        .await
+        .expect("compose the category and role filters");
+    assert_eq!(combined_total, 1);
+    assert_eq!(combined_packages[0].code, "catalog-coding");
+
+    let (marketplace_packages, marketplace_total) = service
+        .list_marketplace_skill_packages_page(
+            tenant_id,
+            organization_id,
+            user_id,
+            page(1, 10),
+            None,
+            &coding_only,
+        )
+        .await
+        .expect("list marketplace coding packages");
+    assert_eq!(marketplace_total, 2);
+    assert!(marketplace_packages
+        .iter()
+        .all(|item| item.categories.contains(&"coding".to_string())));
+
+    let (writing_skills, writing_total) = service
+        .list_hub_skills_page(
+            tenant_id,
+            organization_id,
+            user_id,
+            page(1, 10),
+            None,
+            &SkillCatalogFilter::from_query(Some("writing"), None),
+        )
+        .await
+        .expect("list writing skills");
+    assert_eq!(writing_total, 1);
+    assert_eq!(writing_skills[0].skill_key, "skill.catalog-writing");
+
+    let (operations_skills, operations_skill_total) = service
+        .list_hub_skills_page(
+            tenant_id,
+            organization_id,
+            user_id,
+            page(1, 10),
+            None,
+            &operations_scope,
+        )
+        .await
+        .expect("list skills inside the operations role scope");
+    assert_eq!(operations_skill_total, 2);
+    assert!(operations_skills
+        .iter()
+        .all(|item| item.allowed_role_codes.is_empty()));
+
+    let (visible_categories, visible_total) = service
+        .list_categories_page(tenant_id, "skill_market", page(1, 10), None, true)
+        .await
+        .expect("list visible catalog categories");
+    assert_eq!(visible_total, 2);
+    assert!(visible_categories
+        .iter()
+        .all(|item| item.visible && item.status == 1));
+
+    let (admin_categories, admin_total) = service
+        .list_categories_page(tenant_id, "skill_market", page(1, 10), None, false)
+        .await
+        .expect("list every catalog category for the admin surface");
+    assert_eq!(admin_total, 4);
+    assert_eq!(admin_categories.len(), 4);
+}
+
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn postgres_enforces_skills_repository_contracts() {
     let Some(context) = PostgresTestContext::from_env().await else {
@@ -666,6 +846,7 @@ async fn postgres_enforces_skills_repository_contracts() {
     verify_installable_artifact_visibility(&context.service).await;
     verify_database_integrity(&context.service, &context.pool).await;
     verify_concurrent_installation(&context.service, &context.pool).await;
+    verify_catalog_view_filters(&context.service).await;
 
     context.cleanup().await;
 }

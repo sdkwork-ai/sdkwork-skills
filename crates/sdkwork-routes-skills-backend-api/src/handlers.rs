@@ -293,6 +293,9 @@ where
             state.service.as_ref(),
             context.tenant_id,
             category_type.as_str(),
+            // The admin list keeps hidden and inactive categories so operators
+            // can manage them; the end-user catalog filters them out.
+            false,
             &query.pagination,
         )
         .await,

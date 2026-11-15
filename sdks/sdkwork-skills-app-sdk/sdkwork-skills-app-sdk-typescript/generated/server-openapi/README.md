@@ -33,7 +33,7 @@ const params = {
   cursor: 'cursor',
   q: 'q',
 };
-const result = await client.skills.marketplace.list(params);
+const result = await client.skills.skillPackages.owned.list(params);
 ```
 
 ## Authentication
@@ -67,14 +67,14 @@ const client = new SdkworkAppClient({
 ### skills
 
 ```typescript
-// marketplace.list
+// skillPackages.owned.list
 const params = {
   page: 1,
   page_size: 2,
   cursor: 'cursor',
   q: 'q',
 };
-const result = await client.skills.marketplace.list(params);
+const result = await client.skills.skillPackages.owned.list(params);
 ```
 
 ## Error Handling
@@ -89,7 +89,7 @@ try {
     cursor: 'cursor',
     q: 'q',
   };
-  const result = await client.skills.marketplace.list(params);
+  const result = await client.skills.skillPackages.owned.list(params);
 } catch (error) {
   if (error instanceof AuthenticationError) {
     console.error('Authentication failed:', error.message);

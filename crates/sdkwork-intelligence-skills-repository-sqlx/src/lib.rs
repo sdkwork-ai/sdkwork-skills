@@ -11,8 +11,8 @@ use async_trait::async_trait;
 use sdkwork_database_id::SnowflakeIdGenerator;
 use sdkwork_intelligence_skills_service::{SkillsRepository, SkillsResult};
 use sdkwork_skills_contract::{
-    SkillArtifactRecord, SkillCapabilityRecord, SkillCategoryRecord, SkillInstallationRecord,
-    SkillPackageRecord, SkillRecord,
+    SkillArtifactRecord, SkillCapabilityRecord, SkillCatalogFilter, SkillCategoryRecord,
+    SkillInstallationRecord, SkillPackageRecord, SkillRecord,
 };
 use sdkwork_utils_rust::OffsetListPageParams;
 use sqlx::PgPool;
@@ -36,8 +36,9 @@ impl SkillsRepository for SqlxSkillsRepository {
         tenant_id: u64,
         params: OffsetListPageParams,
         keyword: Option<&str>,
+        filter: &SkillCatalogFilter,
     ) -> SkillsResult<(Vec<SkillPackageRecord>, i64)> {
-        postgres::list_skill_packages_page(&self.pool, tenant_id, params, keyword).await
+        postgres::list_skill_packages_page(&self.pool, tenant_id, params, keyword, filter).await
     }
 
     async fn list_owned_skill_packages_page(
@@ -72,6 +73,7 @@ impl SkillsRepository for SqlxSkillsRepository {
         user_id: u64,
         params: OffsetListPageParams,
         keyword: Option<&str>,
+        filter: &SkillCatalogFilter,
     ) -> SkillsResult<(Vec<SkillPackageRecord>, i64)> {
         postgres::list_marketplace_skill_packages_page(
             &self.pool,
@@ -80,6 +82,7 @@ impl SkillsRepository for SqlxSkillsRepository {
             user_id,
             params,
             keyword,
+            filter,
         )
         .await
     }
@@ -128,6 +131,7 @@ impl SkillsRepository for SqlxSkillsRepository {
         user_id: u64,
         params: OffsetListPageParams,
         keyword: Option<&str>,
+        filter: &SkillCatalogFilter,
     ) -> SkillsResult<(Vec<SkillRecord>, i64)> {
         postgres::list_skills_page(
             &self.pool,
@@ -136,6 +140,7 @@ impl SkillsRepository for SqlxSkillsRepository {
             user_id,
             params,
             keyword,
+            filter,
         )
         .await
     }
@@ -164,8 +169,17 @@ impl SkillsRepository for SqlxSkillsRepository {
         category_type: &str,
         params: OffsetListPageParams,
         keyword: Option<&str>,
+        visible_only: bool,
     ) -> SkillsResult<(Vec<SkillCategoryRecord>, i64)> {
-        postgres::list_categories_page(&self.pool, tenant_id, category_type, params, keyword).await
+        postgres::list_categories_page(
+            &self.pool,
+            tenant_id,
+            category_type,
+            params,
+            keyword,
+            visible_only,
+        )
+        .await
     }
 
     async fn upsert_category(

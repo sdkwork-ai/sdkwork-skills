@@ -1,8 +1,8 @@
 use sdkwork_database_id::SnowflakeIdGenerator;
 use sdkwork_intelligence_skills_service::{SkillsResult, SkillsServiceError};
 use sdkwork_skills_contract::{
-    SkillArtifactRecord, SkillCapabilityRecord, SkillCategoryRecord, SkillInstallationRecord,
-    SkillLifecycleStatus, SkillPackageRecord, SkillRecord,
+    SkillArtifactRecord, SkillCapabilityRecord, SkillCatalogFilter, SkillCategoryRecord,
+    SkillInstallationRecord, SkillLifecycleStatus, SkillPackageRecord, SkillRecord,
 };
 use sdkwork_utils_rust::{OffsetListPageParams, LIST_TOTAL_SQL_COLUMN};
 use sqlx::{PgPool, Postgres, Row, Transaction};
@@ -300,17 +300,63 @@ const INSTALLATION_SELECT: &str = r#"
       ON s.tenant_id=i.tenant_id AND s.package_id=i.package_id AND s.deleted_at IS NULL
 "#;
 
+/// Category half of the catalog view, mirroring
+/// `SkillCatalogFilter::allows_category`.
+///
+/// A record is in view when one of its `skills_category_binding` rows joins a
+/// live `skills_category` whose `code` equals the filter. `category_param` is
+/// the positional placeholder holding the optional selector: `NULL` keeps every
+/// category, so the predicate only ever narrows the caller's tenant and
+/// visibility scope.
+fn catalog_category_predicate(category_param: &str) -> String {
+    format!(
+        "({category_param}::text IS NULL
+          OR EXISTS (
+              SELECT 1
+              FROM skills_category_binding filter_binding
+              JOIN skills_category filter_category
+                ON filter_category.id = filter_binding.category_id
+               AND filter_category.deleted_at IS NULL
+              WHERE filter_binding.skill_id = s.id
+                AND lower(filter_category.code) = lower({category_param}::text)
+          ))"
+    )
+}
+
+/// Role half of the catalog view, mirroring `role_scope_allows`.
+///
+/// An empty scope keeps the all-data view, an empty assignment is open to every
+/// role, and a populated scope matches the records naming one of its codes.
+/// `role_param` is the positional placeholder holding the text array of
+/// lower-cased caller role codes.
+fn catalog_role_scope_predicate(role_param: &str) -> String {
+    format!(
+        "(cardinality({role_param}::text[]) = 0
+          OR jsonb_array_length(p.allowed_role_codes::jsonb) = 0
+          OR EXISTS (
+              SELECT 1
+              FROM jsonb_array_elements_text(p.allowed_role_codes::jsonb) AS allowed_role(code)
+              WHERE lower(allowed_role.code) = ANY({role_param}::text[])
+          ))"
+    )
+}
+
 pub async fn list_skill_packages_page(
     pool: &PgPool,
     tenant_id: u64,
     params: OffsetListPageParams,
     keyword: Option<&str>,
+    filter: &SkillCatalogFilter,
 ) -> SkillsResult<(Vec<SkillPackageRecord>, i64)> {
+    let category_predicate = catalog_category_predicate("$5");
+    let role_predicate = catalog_role_scope_predicate("$6");
     let sql = format!(
         "SELECT package_rows.*, COUNT(*) OVER() AS {LIST_TOTAL_SQL_COLUMN}
          FROM ({PACKAGE_SELECT}
                WHERE p.tenant_id = $1 AND p.deleted_at IS NULL AND p.status <> 4
                  AND ($2 = '%' OR p.display_name ILIKE $2 OR p.package_key ILIKE $2 OR p.code ILIKE $2)
+                 AND {category_predicate}
+                 AND {role_predicate}
          ) package_rows
          ORDER BY featured DESC, sort_weight DESC, updated_at DESC, code ASC LIMIT $3 OFFSET $4"
     );
@@ -319,6 +365,8 @@ pub async fn list_skill_packages_page(
         .bind(search_pattern(keyword))
         .bind(params.page_size)
         .bind(params.offset)
+        .bind(filter.category_code.as_deref())
+        .bind(filter.normalized_role_codes())
         .fetch_all(pool)
         .await
         .map_err(map_sqlx)?;
@@ -380,7 +428,10 @@ pub async fn list_marketplace_skill_packages_page(
     user_id: u64,
     params: OffsetListPageParams,
     keyword: Option<&str>,
+    filter: &SkillCatalogFilter,
 ) -> SkillsResult<(Vec<SkillPackageRecord>, i64)> {
+    let category_predicate = catalog_category_predicate("$7");
+    let role_predicate = catalog_role_scope_predicate("$8");
     let sql = format!(
         "SELECT package_rows.*, COUNT(*) OVER() AS {LIST_TOTAL_SQL_COLUMN}
          FROM ({PACKAGE_SELECT}
@@ -389,6 +440,8 @@ pub async fn list_marketplace_skill_packages_page(
                       OR (p.visibility = 2 AND p.organization_id = $2)
                       OR (p.visibility = 0 AND p.owner_user_id = $3))
                  AND ($4 = '%' OR p.display_name ILIKE $4 OR p.package_key ILIKE $4 OR p.code ILIKE $4)
+                 AND {category_predicate}
+                 AND {role_predicate}
          ) package_rows
          ORDER BY featured DESC, sort_weight DESC, updated_at DESC, code ASC LIMIT $5 OFFSET $6"
     );
@@ -399,6 +452,8 @@ pub async fn list_marketplace_skill_packages_page(
         .bind(search_pattern(keyword))
         .bind(params.page_size)
         .bind(params.offset)
+        .bind(filter.category_code.as_deref())
+        .bind(filter.normalized_role_codes())
         .fetch_all(pool)
         .await
         .map_err(map_sqlx)?;
@@ -441,7 +496,10 @@ pub async fn list_skills_page(
     user_id: u64,
     params: OffsetListPageParams,
     keyword: Option<&str>,
+    filter: &SkillCatalogFilter,
 ) -> SkillsResult<(Vec<SkillRecord>, i64)> {
+    let category_predicate = catalog_category_predicate("$7");
+    let role_predicate = catalog_role_scope_predicate("$8");
     let sql = format!(
         "SELECT skill_rows.*, COUNT(*) OVER() AS {LIST_TOTAL_SQL_COLUMN}
          FROM ({SKILL_SELECT}
@@ -451,6 +509,8 @@ pub async fn list_skills_page(
                       OR (p.visibility = 2 AND p.organization_id = $2)
                       OR (p.visibility = 0 AND p.owner_user_id = $3))
                  AND ($4 = '%' OR p.display_name ILIKE $4 OR s.skill_key ILIKE $4 OR COALESCE(p.summary, '') ILIKE $4)
+                 AND {category_predicate}
+                 AND {role_predicate}
          ) skill_rows
          ORDER BY featured DESC, updated_at DESC, skill_key ASC LIMIT $5 OFFSET $6"
     );
@@ -461,6 +521,8 @@ pub async fn list_skills_page(
         .bind(search_pattern(keyword))
         .bind(params.page_size)
         .bind(params.offset)
+        .bind(filter.category_code.as_deref())
+        .bind(filter.normalized_role_codes())
         .fetch_all(pool)
         .await
         .map_err(map_sqlx)?;
@@ -538,6 +600,7 @@ pub async fn list_categories_page(
     category_type: &str,
     params: OffsetListPageParams,
     keyword: Option<&str>,
+    visible_only: bool,
 ) -> SkillsResult<(Vec<SkillCategoryRecord>, i64)> {
     let sql = format!(
         "SELECT id, uuid, tenant_id, organization_id, category_type, code, name, description,
@@ -547,6 +610,7 @@ pub async fn list_categories_page(
          FROM skills_category
          WHERE category_type = $1 AND tenant_id IN (0, $2) AND deleted_at IS NULL
            AND ($3 = '%' OR name ILIKE $3 OR code ILIKE $3)
+           AND (NOT $6::boolean OR (visible = 1 AND status = 1))
          ORDER BY sort_weight ASC, code ASC LIMIT $4 OFFSET $5"
     );
     let rows = sqlx::query(sqlx::AssertSqlSafe(sql.as_str()))
@@ -555,6 +619,7 @@ pub async fn list_categories_page(
         .bind(search_pattern(keyword))
         .bind(params.page_size)
         .bind(params.offset)
+        .bind(visible_only)
         .fetch_all(pool)
         .await
         .map_err(map_sqlx)?;

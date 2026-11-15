@@ -416,6 +416,28 @@ function categoryListParameters() {
   ];
 }
 
+function catalogListParameters() {
+  return [
+    ...listQueryParameters(),
+    {
+      name: "category_code",
+      in: "query",
+      required: false,
+      description:
+        "One skill category code from the registered taxonomy. Omit it, or send `all`, to keep every category.",
+      schema: { type: "string", maxLength: 128 },
+    },
+    {
+      name: "role_codes",
+      in: "query",
+      required: false,
+      description:
+        "Comma-separated IAM role codes of the signed-in caller, used as the catalog's role scope. An empty value keeps the all-data view; a value keeps records naming one of these roles plus the records open to every role.",
+      schema: { type: "string", maxLength: 1024 },
+    },
+  ];
+}
+
 function installationListParameters() {
   return [
     ...listQueryParameters(),
@@ -582,9 +604,9 @@ function route(
 }
 
 const appRoutes = [
-  route("get", "/app/v3/api/skills", "marketplace.list", listResponse("Skills"), listQueryParameters(), null, "skills.marketplace.read"),
+  route("get", "/app/v3/api/skills", "marketplace.list", listResponse("Skills"), catalogListParameters(), null, "skills.marketplace.read"),
   route("get", "/app/v3/api/skills/{skillKey}", "marketplace.retrieve", resourceResponse("Skill"), [pathParam("skillKey")], null, "skills.marketplace.read"),
-  route("get", "/app/v3/api/skill_packages", "skillPackages.list", listResponse("SkillPackages"), listQueryParameters(), null, "skills.marketplace.read"),
+  route("get", "/app/v3/api/skill_packages", "skillPackages.list", listResponse("SkillPackages"), catalogListParameters(), null, "skills.marketplace.read"),
   route("post", "/app/v3/api/skill_packages", "skillPackages.create", resourceResponse("SkillPackage"), [], "CreateSkillPackageCommand", "skills.packages.create", { successStatus: 201 }),
   route("get", "/app/v3/api/skill_packages/owned", "skillPackages.owned.list", listResponse("SkillPackages"), listQueryParameters(), null, "skills.marketplace.read"),
   route("get", "/app/v3/api/skill_packages/{packageId}", "skillPackages.retrieve", resourceResponse("SkillPackage"), [pathParam("packageId", uint64StringProperty())], null, "skills.marketplace.read"),
@@ -592,14 +614,14 @@ const appRoutes = [
   route("delete", "/app/v3/api/skill_packages/{packageId}", "skillPackages.delete", null, [pathParam("packageId", uint64StringProperty())], null, "skills.packages.delete", { successStatus: 204 }),
   route("get", "/app/v3/api/skill_packages/{packageId}/artifacts", "skillPackages.artifacts.list", listResponse("SkillArtifacts"), [pathParam("packageId", uint64StringProperty()), ...listQueryParameters()], null, "skills.marketplace.read"),
   route("post", "/app/v3/api/skill_packages/{packageId}/artifacts", "skillPackages.artifacts.create", resourceResponse("SkillArtifact"), [pathParam("packageId", uint64StringProperty())], "CreateSkillArtifactCommand", "skills.artifacts.create", { successStatus: 201 }),
-  route("get", "/app/v3/api/skill_categories", "skillCategories.list", listResponse("SkillCategories"), listQueryParameters(), null, "skills.marketplace.read"),
+  route("get", "/app/v3/api/skill_categories", "skillCategories.list", listResponse("SkillCategories"), categoryListParameters(), null, "skills.marketplace.read"),
   route("post", "/app/v3/api/skill_packages/{packageId}/installations", "skillPackages.installations.create", resourceResponse("SkillInstallation"), [pathParam("packageId", uint64StringProperty())], "CreateSkillInstallationCommand", "skills.packages.install", { successStatus: 201 }),
   route("get", "/app/v3/api/skill_installations", "skillInstallations.list", listResponse("SkillInstallations"), installationListParameters(), null, "skills.installations.read"),
 ];
 
 const backendRoutes = [
-  route("get", "/backend/v3/api/skills", "marketplace.list", listResponse("Skills"), listQueryParameters(), null, "skills.marketplace.read"),
-  route("get", "/backend/v3/api/skill_packages", "skillPackages.list", listResponse("SkillPackages"), listQueryParameters(), null, "skills.packages.manage"),
+  route("get", "/backend/v3/api/skills", "marketplace.list", listResponse("Skills"), catalogListParameters(), null, "skills.marketplace.read"),
+  route("get", "/backend/v3/api/skill_packages", "skillPackages.list", listResponse("SkillPackages"), catalogListParameters(), null, "skills.packages.manage"),
   route("post", "/backend/v3/api/skill_packages", "skillPackages.create", resourceResponse("SkillPackage"), [], "CreateSkillPackageCommand", "skills.packages.manage", { successStatus: 201 }),
   route("get", "/backend/v3/api/skill_packages/{packageId}", "skillPackages.retrieve", resourceResponse("SkillPackage"), [pathParam("packageId", uint64StringProperty())], null, "skills.packages.manage"),
   route("patch", "/backend/v3/api/skill_packages/{packageId}", "skillPackages.update", resourceResponse("SkillPackage"), [pathParam("packageId", uint64StringProperty())], "UpdateSkillPackageCommand", "skills.packages.manage"),
