@@ -2237,7 +2237,9 @@
           },
           "totalItems": {
             "type": "string",
-            "pattern": "^[0-9]+$"
+            "format": "int64",
+            "pattern": "^[0-9]+$",
+            "x-sdkwork-int64-string": true
           },
           "totalPages": {
             "type": "integer",
@@ -2412,6 +2414,124 @@
           }
         ]
       },
+      "SkillArtifactDriveFileSource": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "kind",
+          "driveUri",
+          "checksumSha256"
+        ],
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "drive_file"
+            ]
+          },
+          "driveUri": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2048,
+            "pattern": "^drive://spaces/[^/]+/nodes/[^/]+$"
+          },
+          "checksumSha256": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "sizeBytes": {
+            "type": "string",
+            "format": "int64",
+            "pattern": "^[0-9]+$",
+            "minLength": 1,
+            "x-sdkwork-int64-string": true,
+            "x-sdkwork-rust-type": "u64",
+            "nullable": true
+          }
+        },
+        "description": "An archive uploaded to sdkwork-drive. checksumSha256 is the SHA-256 of the archive bytes."
+      },
+      "SkillArtifactDriveDirectorySource": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "kind",
+          "driveUri"
+        ],
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "drive_directory"
+            ]
+          },
+          "driveUri": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2048,
+            "pattern": "^drive://spaces/[^/]+/nodes/[^/]+$",
+            "description": "Drive folder node URI. The runtime materializes the folder contents as the skill package."
+          }
+        },
+        "description": "An existing sdkwork-drive folder. The folder contents are the skill package; no archive checksum applies."
+      },
+      "SkillArtifactGitSource": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "kind",
+          "repositoryUrl",
+          "repositoryPath"
+        ],
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "git"
+            ]
+          },
+          "repositoryUrl": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2048,
+            "pattern": "^https://[A-Za-z0-9][A-Za-z0-9.-]*(?::[0-9]{1,5})?/[^\\s]+$",
+            "description": "Absolute https clone URL. Embedded credentials are rejected; private repositories require a future credential binding."
+          },
+          "repositoryPath": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1024,
+            "pattern": "^[^\\\\]+$",
+            "description": "Path inside the repository. Use . for the repository root. Absolute and parent-traversal paths are rejected."
+          },
+          "gitRef": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255,
+            "pattern": "^[A-Za-z0-9._/-]+$",
+            "nullable": true,
+            "description": "Optional branch, tag, or commit id. When omitted, the repository default branch is used."
+          }
+        },
+        "description": "A path inside an https Git repository. The backend stores the descriptor; the skill runtime clones at installation time."
+      },
+      "SkillArtifactSource": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/SkillArtifactDriveFileSource"
+          },
+          {
+            "$ref": "#/components/schemas/SkillArtifactDriveDirectorySource"
+          },
+          {
+            "$ref": "#/components/schemas/SkillArtifactGitSource"
+          }
+        ],
+        "discriminator": {
+          "propertyName": "kind"
+        },
+        "description": "Artifact content source: a Drive archive, an existing Drive directory, or a Git repository path."
+      },
       "SkillRecord": {
         "type": "object",
         "additionalProperties": false,
@@ -2431,10 +2551,10 @@
           "featured",
           "installCount",
           "tags",
+          "allowedRoleCodes",
           "version",
           "createdAt",
-          "updatedAt",
-          "allowedRoleCodes"
+          "updatedAt"
         ],
         "properties": {
           "id": {
@@ -2530,6 +2650,15 @@
             },
             "default": []
           },
+          "allowedRoleCodes": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_.-]{0,127}$"
+            },
+            "default": [],
+            "description": "IAM role codes allowed to see this resource. An empty list means every role (the default)."
+          },
           "version": {
             "type": "string",
             "format": "int64",
@@ -2550,15 +2679,6 @@
             "type": "string",
             "format": "date-time",
             "nullable": true
-          },
-          "allowedRoleCodes": {
-            "type": "array",
-            "items": {
-              "type": "string",
-              "pattern": "^[a-z][a-z0-9_.-]{0,127}$"
-            },
-            "default": [],
-            "description": "IAM role codes allowed to see this resource. An empty list means every role (the default)."
           }
         }
       },
@@ -2577,14 +2697,14 @@
           "displayName",
           "categories",
           "tags",
+          "allowedRoleCodes",
           "status",
           "visibility",
           "featured",
           "sortWeight",
           "version",
           "createdAt",
-          "updatedAt",
-          "allowedRoleCodes"
+          "updatedAt"
         ],
         "properties": {
           "id": {
@@ -2663,6 +2783,15 @@
             },
             "default": []
           },
+          "allowedRoleCodes": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_.-]{0,127}$"
+            },
+            "default": [],
+            "description": "IAM role codes allowed to see this resource. An empty list means every role (the default)."
+          },
           "status": {
             "type": "string",
             "enum": [
@@ -2709,15 +2838,6 @@
             "type": "string",
             "format": "date-time",
             "nullable": true
-          },
-          "allowedRoleCodes": {
-            "type": "array",
-            "items": {
-              "type": "string",
-              "pattern": "^[a-z][a-z0-9_.-]{0,127}$"
-            },
-            "default": [],
-            "description": "IAM role codes allowed to see this resource. An empty list means every role (the default)."
           }
         }
       },
@@ -2730,8 +2850,7 @@
           "tenantId",
           "packageId",
           "versionLabel",
-          "artifactRef",
-          "checksumSha256",
+          "source",
           "invocationKind",
           "entrypoint",
           "inputSchema",
@@ -2775,24 +2894,8 @@
             "minLength": 1,
             "maxLength": 128
           },
-          "artifactRef": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 2048,
-            "pattern": "^drive://spaces/[^/]+/nodes/[^/]+$"
-          },
-          "checksumSha256": {
-            "type": "string",
-            "pattern": "^[0-9a-f]{64}$"
-          },
-          "sizeBytes": {
-            "type": "string",
-            "format": "int64",
-            "pattern": "^[0-9]+$",
-            "minLength": 1,
-            "x-sdkwork-int64-string": true,
-            "x-sdkwork-rust-type": "u64",
-            "nullable": true
+          "source": {
+            "$ref": "#/components/schemas/SkillArtifactSource"
           },
           "invocationKind": {
             "type": "string",
@@ -3069,8 +3172,7 @@
         "additionalProperties": false,
         "required": [
           "versionLabel",
-          "artifactRef",
-          "checksumSha256",
+          "source",
           "invocationKind",
           "entrypoint"
         ],
@@ -3080,24 +3182,8 @@
             "minLength": 1,
             "maxLength": 128
           },
-          "artifactRef": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 2048,
-            "pattern": "^drive://spaces/[^/]+/nodes/[^/]+$"
-          },
-          "checksumSha256": {
-            "type": "string",
-            "pattern": "^[0-9a-f]{64}$"
-          },
-          "sizeBytes": {
-            "type": "string",
-            "format": "int64",
-            "pattern": "^[0-9]+$",
-            "minLength": 1,
-            "x-sdkwork-int64-string": true,
-            "x-sdkwork-rust-type": "u64",
-            "nullable": true
+          "source": {
+            "$ref": "#/components/schemas/SkillArtifactSource"
           },
           "invocationKind": {
             "type": "string",
@@ -3206,6 +3292,15 @@
             },
             "default": []
           },
+          "allowedRoleCodes": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_.-]{0,127}$"
+            },
+            "default": [],
+            "description": "IAM role codes allowed to see this resource. An empty list means every role (the default)."
+          },
           "status": {
             "type": "string",
             "enum": [
@@ -3238,15 +3333,6 @@
           },
           "initialArtifact": {
             "$ref": "#/components/schemas/CreateSkillArtifactCommand"
-          },
-          "allowedRoleCodes": {
-            "type": "array",
-            "items": {
-              "type": "string",
-              "pattern": "^[a-z][a-z0-9_.-]{0,127}$"
-            },
-            "default": [],
-            "description": "IAM role codes allowed to see this resource. An empty list means every role (the default)."
           }
         }
       },
@@ -3292,6 +3378,15 @@
             },
             "default": []
           },
+          "allowedRoleCodes": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_.-]{0,127}$"
+            },
+            "default": [],
+            "description": "IAM role codes allowed to see this resource. An empty list means every role (the default)."
+          },
           "status": {
             "type": "string",
             "enum": [
@@ -3317,15 +3412,6 @@
           "sortWeight": {
             "type": "integer",
             "format": "int32"
-          },
-          "allowedRoleCodes": {
-            "type": "array",
-            "items": {
-              "type": "string",
-              "pattern": "^[a-z][a-z0-9_.-]{0,127}$"
-            },
-            "default": [],
-            "description": "IAM role codes allowed to see this resource. An empty list means every role (the default)."
           }
         }
       },

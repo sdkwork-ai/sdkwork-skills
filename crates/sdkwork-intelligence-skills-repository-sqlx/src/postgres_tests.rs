@@ -3,9 +3,10 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use sdkwork_database_id::SnowflakeIdGenerator;
 use sdkwork_intelligence_skills_service::{SkillsService, SkillsServiceError};
 use sdkwork_skills_contract::{
-    SkillArtifactRecord, SkillArtifactStatus, SkillCapabilityRecord, SkillCapabilityRiskLevel,
-    SkillCategoryRecord, SkillInstallationRecord, SkillInstallationSubjectKind,
-    SkillInvocationKind, SkillLifecycleStatus, SkillPackageRecord, SkillVisibility,
+    SkillArtifactRecord, SkillArtifactSource, SkillArtifactStatus, SkillCapabilityRecord,
+    SkillCapabilityRiskLevel, SkillCategoryRecord, SkillInstallationRecord,
+    SkillInstallationSubjectKind, SkillInvocationKind, SkillLifecycleStatus, SkillPackageRecord,
+    SkillVisibility,
 };
 use sdkwork_utils_rust::OffsetListPageParams;
 use sqlx::postgres::PgPoolOptions;
@@ -156,9 +157,11 @@ fn artifact(tenant_id: u64, package_id: u64, version_label: &str) -> SkillArtifa
         tenant_id,
         package_id,
         version_label: version_label.to_string(),
-        artifact_ref: format!("drive://spaces/skills/nodes/artifact-{version_label}"),
-        checksum_sha256: "a".repeat(64),
-        size_bytes: Some(4096),
+        source: SkillArtifactSource::DriveFile {
+            drive_uri: format!("drive://spaces/skills/nodes/artifact-{version_label}"),
+            checksum_sha256: "a".repeat(64),
+            size_bytes: Some(4096),
+        },
         invocation_kind: SkillInvocationKind::LocalWorkflow,
         entrypoint: "workflows/main.yaml".to_string(),
         input_schema: serde_json::json!({}),

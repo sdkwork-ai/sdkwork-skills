@@ -54,6 +54,90 @@ const driveUri = {
   maxLength: 2048,
   pattern: "^drive://spaces/[^/]+/nodes/[^/]+$",
 };
+const gitRepositoryUrl = {
+  type: "string",
+  minLength: 1,
+  maxLength: 2048,
+  pattern: "^https://[A-Za-z0-9][A-Za-z0-9.-]*(?::[0-9]{1,5})?/[^\\s]+$",
+};
+const gitRepositoryPath = {
+  type: "string",
+  minLength: 1,
+  maxLength: 1024,
+  pattern: "^[^\\\\]+$",
+};
+const gitRef = {
+  type: "string",
+  minLength: 1,
+  maxLength: 255,
+  pattern: "^[A-Za-z0-9._/-]+$",
+};
+
+const artifactSourceSchemas = {
+  SkillArtifactDriveFileSource: {
+    ...strictObject(
+      ["kind", "driveUri", "checksumSha256"],
+      {
+        kind: { type: "string", enum: ["drive_file"] },
+        driveUri,
+        checksumSha256: { type: "string", pattern: "^[0-9a-f]{64}$" },
+        sizeBytes: nullable(uint64StringProperty()),
+      },
+    ),
+    description:
+      "An archive uploaded to sdkwork-drive. checksumSha256 is the SHA-256 of the archive bytes.",
+  },
+  SkillArtifactDriveDirectorySource: {
+    ...strictObject(
+      ["kind", "driveUri"],
+      {
+        kind: { type: "string", enum: ["drive_directory"] },
+        driveUri: {
+          ...driveUri,
+          description:
+            "Drive folder node URI. The runtime materializes the folder contents as the skill package.",
+        },
+      },
+    ),
+    description:
+      "An existing sdkwork-drive folder. The folder contents are the skill package; no archive checksum applies.",
+  },
+  SkillArtifactGitSource: {
+    ...strictObject(
+      ["kind", "repositoryUrl", "repositoryPath"],
+      {
+        kind: { type: "string", enum: ["git"] },
+        repositoryUrl: {
+          ...gitRepositoryUrl,
+          description:
+            "Absolute https clone URL. Embedded credentials are rejected; private repositories require a future credential binding.",
+        },
+        repositoryPath: {
+          ...gitRepositoryPath,
+          description:
+            "Path inside the repository. Use . for the repository root. Absolute and parent-traversal paths are rejected.",
+        },
+        gitRef: {
+          ...nullable(gitRef),
+          description:
+            "Optional branch, tag, or commit id. When omitted, the repository default branch is used.",
+        },
+      },
+    ),
+    description:
+      "A path inside an https Git repository. The backend stores the descriptor; the skill runtime clones at installation time.",
+  },
+  SkillArtifactSource: {
+    oneOf: [
+      { $ref: "#/components/schemas/SkillArtifactDriveFileSource" },
+      { $ref: "#/components/schemas/SkillArtifactDriveDirectorySource" },
+      { $ref: "#/components/schemas/SkillArtifactGitSource" },
+    ],
+    discriminator: { propertyName: "kind" },
+    description:
+      "Artifact content source: a Drive archive, an existing Drive directory, or a Git repository path.",
+  },
+};
 
 const domainSchemas = {
   SkillRecord: strictObject(
@@ -120,8 +204,8 @@ const domainSchemas = {
   ),
   SkillArtifactRecord: strictObject(
     [
-      "id", "uuid", "tenantId", "packageId", "versionLabel", "artifactRef",
-      "checksumSha256", "invocationKind", "entrypoint", "inputSchema", "outputSchema",
+      "id", "uuid", "tenantId", "packageId", "versionLabel", "source",
+      "invocationKind", "entrypoint", "inputSchema", "outputSchema",
       "configSchema", "defaultConfig", "status", "capabilityKeys", "createdAt",
     ],
     {
@@ -130,9 +214,7 @@ const domainSchemas = {
       tenantId: uint64StringProperty(),
       packageId: uint64StringProperty(),
       versionLabel: { type: "string", minLength: 1, maxLength: 128 },
-      artifactRef: driveUri,
-      checksumSha256: { type: "string", pattern: "^[0-9a-f]{64}$" },
-      sizeBytes: nullable(uint64StringProperty()),
+      source: { $ref: "#/components/schemas/SkillArtifactSource" },
       invocationKind: { type: "string", enum: invocationKind },
       entrypoint: { type: "string", minLength: 1, maxLength: 255 },
       inputSchema: jsonObject,
@@ -226,12 +308,10 @@ const domainSchemas = {
     config: { ...jsonObject, default: {} },
   }),
   CreateSkillArtifactCommand: strictObject(
-    ["versionLabel", "artifactRef", "checksumSha256", "invocationKind", "entrypoint"],
+    ["versionLabel", "source", "invocationKind", "entrypoint"],
     {
       versionLabel: { type: "string", minLength: 1, maxLength: 128 },
-      artifactRef: driveUri,
-      checksumSha256: { type: "string", pattern: "^[0-9a-f]{64}$" },
-      sizeBytes: nullable(uint64StringProperty()),
+      source: { $ref: "#/components/schemas/SkillArtifactSource" },
       invocationKind: { type: "string", enum: invocationKind },
       entrypoint: { type: "string", minLength: 1, maxLength: 255 },
       inputSchema: { ...jsonObject, default: {} },
@@ -379,6 +459,7 @@ const envelopeSchemas = structuredClone(sdkWorkEnvelopeComponentSchemas);
 
 const appSchemas = {
   ...envelopeSchemas,
+  ...artifactSourceSchemas,
   SkillRecord: domainSchemas.SkillRecord,
   SkillPackageRecord: domainSchemas.SkillPackageRecord,
   SkillArtifactRecord: domainSchemas.SkillArtifactRecord,
@@ -402,6 +483,7 @@ const appSchemas = {
 
 const backendSchemas = {
   ...structuredClone(sdkWorkEnvelopeComponentSchemas),
+  ...artifactSourceSchemas,
   SkillRecord: domainSchemas.SkillRecord,
   SkillPackageRecord: domainSchemas.SkillPackageRecord,
   SkillArtifactRecord: domainSchemas.SkillArtifactRecord,

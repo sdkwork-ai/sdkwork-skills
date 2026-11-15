@@ -4,6 +4,10 @@ export type {
   SkillCategoryRecord,
   SkillArtifactRecord,
   SkillInstallationRecord,
+  SkillArtifactSource,
+  SkillArtifactDriveFileSource,
+  SkillArtifactDriveDirectorySource,
+  SkillArtifactGitSource,
 } from '@sdkwork/skills-app-sdk';
 
 export type {

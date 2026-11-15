@@ -1,30 +1,26 @@
-import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { useParams } from 'react-router-dom';
-import { isDriveArtifactRef } from '@sdkwork/skills-pc-commons/driveUri';
 import { createSkillArtifact, listPackageArtifacts } from '@sdkwork/skills-pc-admin-core';
 import {
-  uploadSkillPackageArchive,
   useSkillsClients,
   type SkillArtifactRecord,
+  type SkillArtifactSource,
 } from '@sdkwork/skills-pc-core';
-import { useSkillsAdminCopy } from '@sdkwork/skills-pc-admin';
+import { ArtifactSourceField, useSkillsAdminCopy } from '@sdkwork/skills-pc-admin';
 import { SurfaceDrawer } from '../components/SurfaceOverlay.tsx';
 
 export function PackageArtifactsPage() {
   const copy = useSkillsAdminCopy();
   const clients = useSkillsClients();
   const { packageId = '' } = useParams();
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const [artifacts, setArtifacts] = useState<SkillArtifactRecord[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const [uploading, setUploading] = useState(false);
-  const [selectedFileName, setSelectedFileName] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [artifactSourceKey, setArtifactSourceKey] = useState(0);
   const [createOpen, setCreateOpen] = useState(false);
   const [form, setForm] = useState({
     versionLabel: '1.1.0',
-    artifactRef: '',
-    checksumSha256: '',
-    sizeBytes: null as string | null,
+    source: null as SkillArtifactSource | null,
     invocationKind: 'local-workflow' as const,
     entrypoint: 'run',
     inputSchema: {} as Record<string, unknown>,
@@ -43,52 +39,34 @@ export function PackageArtifactsPage() {
     reload().catch((cause: Error) => setError(cause.message));
   }, [clients, packageId]);
 
-  async function onUploadSelectedFile() {
-    const file = fileInputRef.current?.files?.[0];
-    if (!file) {
-      setError(copy.artifacts.errors.selectArchive);
-      return;
-    }
-    setUploading(true);
+  function closeCreate() {
+    if (submitting) return;
+    setCreateOpen(false);
     setError(null);
-    try {
-      const artifact = await uploadSkillPackageArchive(clients.drive, file);
-      setForm((current) => ({
-        ...current,
-        artifactRef: artifact.artifactRef,
-        checksumSha256: artifact.checksumSha256,
-        sizeBytes: artifact.sizeBytes,
-      }));
-      setSelectedFileName(file.name);
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : String(cause));
-    } finally {
-      setUploading(false);
-    }
   }
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
     setError(null);
-    if (!isDriveArtifactRef(form.artifactRef)) {
+    const source = form.source;
+    if (!source) {
       setError(copy.artifacts.errors.needArtifact);
       return;
     }
-    if (!/^[0-9a-f]{64}$/.test(form.checksumSha256)) {
-      setError(copy.artifacts.errors.checksum);
-      return;
-    }
+    setSubmitting(true);
     try {
-      await createSkillArtifact(clients, packageId, form);
-      setForm((current) => ({ ...current, artifactRef: '', checksumSha256: '' }));
-      setSelectedFileName(null);
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-      }
+      await createSkillArtifact(clients, packageId, {
+        ...form,
+        source,
+      });
+      setForm((current) => ({ ...current, source: null }));
+      setArtifactSourceKey((key) => key + 1);
       setCreateOpen(false);
       await reload();
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : String(cause));
+    } finally {
+      setSubmitting(false);
     }
   }
 
@@ -115,6 +93,7 @@ export function PackageArtifactsPage() {
               <thead>
                 <tr>
                   <th>{copy.artifacts.table.version}</th>
+                  <th>{copy.artifacts.table.source}</th>
                   <th>{copy.artifacts.table.status}</th>
                   <th>{copy.artifacts.table.invocation}</th>
                 </tr>
@@ -123,6 +102,7 @@ export function PackageArtifactsPage() {
                 {artifacts.map((item) => (
                   <tr key={item.id}>
                     <td>{item.versionLabel}</td>
+                    <td>{copy.artifacts.sourceLabels[item.source.kind] ?? item.source.kind}</td>
                     <td>{copy.artifacts.statusLabels[item.status] ?? item.status}</td>
                     <td>
                       {copy.artifacts.invocationLabels[item.invocationKind] ?? item.invocationKind}
@@ -137,37 +117,33 @@ export function PackageArtifactsPage() {
       <SurfaceDrawer
         open={createOpen}
         title={copy.artifacts.drawer.title}
-        onClose={() => setCreateOpen(false)}
+        onClose={closeCreate}
       >
         <form onSubmit={onSubmit} style={{ display: 'grid', gap: 8 }}>
+          {error ? (
+            <p role="alert" className="skills-console-error">
+              {error}
+            </p>
+          ) : null}
           <input
             value={form.versionLabel}
             onChange={(event) => setForm({ ...form, versionLabel: event.target.value })}
             placeholder={copy.artifacts.drawer.versionLabelPlaceholder}
             required
           />
-          <div style={{ display: 'grid', gap: 8 }}>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".zip,.tar,.gz,.tgz,.skillpkg,application/zip"
-            />
-            <button type="button" onClick={onUploadSelectedFile} disabled={uploading}>
-              {uploading ? copy.artifacts.drawer.uploading : copy.artifacts.drawer.upload}
-            </button>
-            {selectedFileName ? <p>{copy.artifacts.drawer.uploadedFile(selectedFileName)}</p> : null}
-            <input
-              value={form.artifactRef}
-              readOnly
-              placeholder={copy.artifacts.drawer.artifactRefPlaceholder}
-            />
-          </div>
+          <ArtifactSourceField
+            key={artifactSourceKey}
+            driveClient={clients.drive}
+            value={form.source}
+            onChange={(source) => setForm((current) => ({ ...current, source }))}
+            disabled={submitting}
+          />
           <div className="sdkwork-surface-drawer-form-actions">
-            <button type="button" onClick={() => setCreateOpen(false)}>
+            <button type="button" onClick={closeCreate} disabled={submitting}>
               {copy.artifacts.drawer.cancel}
             </button>
-            <button type="submit" disabled={uploading}>
-              {copy.artifacts.drawer.submit}
+            <button type="submit" disabled={submitting || !form.source}>
+              {submitting ? copy.artifacts.drawer.submitting : copy.artifacts.drawer.submit}
             </button>
           </div>
         </form>

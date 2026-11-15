@@ -1,10 +1,10 @@
 import { useRef, useState, type FormEvent, type ReactNode } from 'react';
 import { isBlank, trim } from '@sdkwork/utils';
-import { isDriveArtifactRef } from '@sdkwork/skills-pc-commons/driveUri';
 import {
   createOwnSkillPackage,
   uploadSkillPackageArchive,
   useSkillsClients,
+  type SkillArtifactSource,
 } from '@sdkwork/skills-pc-core';
 import { useSkillsConsoleT } from '../locale.tsx';
 import { SkillCategorySelect } from './SkillCategorySelect.tsx';
@@ -20,9 +20,7 @@ function createEmptyForm(t: ReturnType<typeof useSkillsConsoleT>) {
     tags: ['self-service'] as string[],
     initialArtifact: {
       versionLabel: '1.0.0',
-      artifactRef: '',
-      checksumSha256: '',
-      sizeBytes: null as string | null,
+      source: null as SkillArtifactSource | null,
       invocationKind: 'local-workflow' as const,
       entrypoint: 'run',
       inputSchema: {} as Record<string, unknown>,
@@ -82,9 +80,12 @@ export function CreateSkillForm({ onSuccess, onCancel }: CreateSkillFormProps) {
         ...current,
         initialArtifact: {
           ...current.initialArtifact,
-          artifactRef: artifact.artifactRef,
-          checksumSha256: artifact.checksumSha256,
-          sizeBytes: artifact.sizeBytes,
+          source: {
+            kind: 'drive_file',
+            driveUri: artifact.artifactRef,
+            checksumSha256: artifact.checksumSha256,
+            sizeBytes: artifact.sizeBytes,
+          },
         },
       }));
       setSelectedFileName(file.name);
@@ -102,18 +103,16 @@ export function CreateSkillForm({ onSuccess, onCancel }: CreateSkillFormProps) {
       setError(t('create.error.categoryRequired'));
       return;
     }
-    if (!isDriveArtifactRef(form.initialArtifact.artifactRef)) {
+    const source = form.initialArtifact.source;
+    if (!source) {
       setError(t('create.error.needArtifact'));
-      return;
-    }
-    if (!/^[0-9a-f]{64}$/.test(form.initialArtifact.checksumSha256)) {
-      setError(t('create.error.checksum'));
       return;
     }
     setSubmitting(true);
     try {
       const record = await createOwnSkillPackage(clients, {
         ...form,
+        initialArtifact: { ...form.initialArtifact, source },
         categories: [form.categoryCode],
       });
       setForm(createEmptyForm(t));
@@ -221,7 +220,11 @@ export function CreateSkillForm({ onSuccess, onCancel }: CreateSkillFormProps) {
       </Field>
       <Field label={t('create.field.artifactRef')}>
         <input
-          value={form.initialArtifact.artifactRef}
+          value={
+            form.initialArtifact.source?.kind === 'drive_file'
+              ? form.initialArtifact.source.driveUri
+              : ''
+          }
           readOnly
           placeholder={t('create.placeholder.artifactRef')}
           required
@@ -238,7 +241,7 @@ export function CreateSkillForm({ onSuccess, onCancel }: CreateSkillFormProps) {
           type="submit"
           disabled={
             isBlank(trim(form.categoryCode)) ||
-            isBlank(trim(form.initialArtifact.artifactRef)) ||
+            !form.initialArtifact.source ||
             uploading ||
             submitting
           }

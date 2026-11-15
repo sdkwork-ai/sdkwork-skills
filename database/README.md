@@ -16,7 +16,7 @@ exactly the ten tables below. Skills does not own a client-local database.
 | `skills_definition` | Marketplace publication and review state for one package |
 | `skills_category_binding` | Normalized Skill-to-category relationship |
 | `skills_capability` | Governed capability dictionary and risk level |
-| `skills_artifact` | Immutable versioned release metadata and Drive artifact reference |
+| `skills_artifact` | Immutable versioned release metadata and structured artifact source (Drive archive, Drive directory, or Git repository) |
 | `skills_artifact_capability` | Normalized artifact-to-capability relationship |
 | `skills_installation` | Exact artifact installed for an IAM user/organization or Agents project/agent |
 | `skills_asset` | Skill, package, or artifact media references |
@@ -44,6 +44,21 @@ management API and never through the self-service package path.
 Role codes follow `^[a-z][a-z0-9_.-]{0,127}$` and are stored normalized
 (trimmed, de-duplicated, sorted) by the application. A GIN index serves future
 role-membership filtering without a table scan.
+
+## Artifact Sources
+
+`skills_artifact.source_json` is the artifact source authority and stores one
+discriminated descriptor:
+
+| `kind` | Fields | Meaning |
+| --- | --- | --- |
+| `drive_file` | `driveUri`, `checksumSha256`, optional `sizeBytes` | Archive uploaded to sdkwork-drive |
+| `drive_directory` | `driveUri` | Existing sdkwork-drive folder; no archive checksum |
+| `git` | `repositoryUrl`, `repositoryPath`, optional `gitRef` | Path inside an https Git repository |
+
+The legacy `artifact_ref`, `checksum_sha256`, and `size_bytes` columns remain
+nullable for pre-`source_json` compatibility. New writes populate only
+`source_json`, and every read path uses the structured source.
 
 Artifact lifecycle timestamps form a database-checked state machine: drafts
 have no publication timestamps, published artifacts have `published_at`, and
@@ -99,7 +114,8 @@ This module is in initialization state for greenfield deployments:
 This module is in **initialization state** for greenfield deployments:
 
 1. **Baseline** — `database/ddl/baseline/{engine}/0001_skills_baseline.sql` contains the full DDL snapshot.
-2. **Migrations** — `database/migrations/{engine}/` is reserved for post-GA incremental schema changes only. It is intentionally empty at initialization.
+2. **Migrations** — `database/migrations/{engine}/` carries the additive steps already
+   applied to existing deployments (organization sentinel, role assignment, artifact sources).
 3. **Drift** — run `pnpm db:drift:check` before release.
 
 ## Commands

@@ -1,6 +1,6 @@
 use sdkwork_skills_contract::{
-    SkillArtifactStatus, SkillCapabilityRiskLevel, SkillCategoryType, SkillInstallationSubjectKind,
-    SkillInvocationKind, SkillLifecycleStatus, SkillVisibility,
+    SkillArtifactSource, SkillArtifactStatus, SkillCapabilityRiskLevel, SkillCategoryType,
+    SkillInstallationSubjectKind, SkillInvocationKind, SkillLifecycleStatus, SkillVisibility,
 };
 use serde::{de::Error as _, Deserialize, Deserializer};
 use serde_json::{Map, Value};
@@ -102,10 +102,7 @@ pub struct CreateSkillInstallationCommand {
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct CreateSkillArtifactCommand {
     pub version_label: String,
-    pub artifact_ref: String,
-    pub checksum_sha256: String,
-    #[serde(default, with = "sdkwork_utils_rust::serde_uint64::option")]
-    pub size_bytes: Option<u64>,
+    pub source: SkillArtifactSource,
     pub invocation_kind: SkillInvocationKind,
     pub entrypoint: String,
     #[serde(default = "empty_object")]

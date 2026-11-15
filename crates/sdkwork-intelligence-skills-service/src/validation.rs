@@ -1,8 +1,8 @@
 use regex_lite::Regex;
 use sdkwork_drive_contract::DriveUri;
 use sdkwork_skills_contract::{
-    SkillArtifactRecord, SkillArtifactStatus, SkillCapabilityRecord, SkillCategoryRecord,
-    SkillInstallationRecord, SkillInstallationSubjectKind, SkillPackageRecord,
+    SkillArtifactRecord, SkillArtifactSource, SkillArtifactStatus, SkillCapabilityRecord,
+    SkillCategoryRecord, SkillInstallationRecord, SkillInstallationSubjectKind, SkillPackageRecord,
 };
 use sdkwork_utils_rust::trim;
 
@@ -22,6 +22,15 @@ fn capability_key_pattern() -> Regex {
 
 fn sha256_pattern() -> Regex {
     Regex::new(r"^[0-9a-f]{64}$").expect("valid sha256 regex")
+}
+
+fn git_repository_url_pattern() -> Regex {
+    Regex::new(r"^https://[A-Za-z0-9][A-Za-z0-9.-]*(?::[0-9]{1,5})?/[^\s]+$")
+        .expect("valid git repository URL regex")
+}
+
+fn git_ref_pattern() -> Regex {
+    Regex::new(r"^[A-Za-z0-9._/-]+$").expect("valid git ref regex")
 }
 
 fn role_code_pattern() -> Regex {
@@ -45,6 +54,96 @@ fn validate_json_object(value: &serde_json::Value, field: &str) -> SkillsResult<
     Ok(())
 }
 
+fn validate_drive_uri(drive_uri: &str) -> SkillsResult<()> {
+    DriveUri::parse(drive_uri)
+        .map_err(|error| invalid(format!("drive source URI is invalid: {error}")))?;
+    Ok(())
+}
+
+fn validate_git_repository_url(repository_url: &str) -> SkillsResult<()> {
+    let value = trim(repository_url);
+    if value.len() > 2048 || !git_repository_url_pattern().is_match(&value) {
+        return Err(invalid(
+            "git repository_url must be an absolute https URL without credentials or whitespace",
+        ));
+    }
+    Ok(())
+}
+
+fn validate_git_repository_path(repository_path: &str) -> SkillsResult<()> {
+    let value = trim(repository_path);
+    if value.is_empty() || value.len() > 1024 {
+        return Err(invalid(
+            "git repository_path must contain 1 to 1024 characters",
+        ));
+    }
+    if value.starts_with('/') || value.contains('\\') || value.chars().any(char::is_control) {
+        return Err(invalid(
+            "git repository_path must be a relative POSIX path without control characters",
+        ));
+    }
+    if value != "." {
+        for segment in value.split('/') {
+            if segment.is_empty() || segment == "." || segment == ".." {
+                return Err(invalid(
+                    "git repository_path must not contain empty, '.', or '..' segments",
+                ));
+            }
+        }
+    }
+    Ok(())
+}
+
+fn validate_git_ref(git_ref: &str) -> SkillsResult<()> {
+    let value = trim(git_ref);
+    if value.is_empty() || value.len() > 255 || !git_ref_pattern().is_match(&value) {
+        return Err(invalid(
+            "git_ref must be a 1 to 255 character branch, tag, or commit id",
+        ));
+    }
+    if value == "@"
+        || value.contains("..")
+        || value.starts_with('/')
+        || value.ends_with('/')
+        || value.contains("//")
+    {
+        return Err(invalid("git_ref is not a safe revision name"));
+    }
+    Ok(())
+}
+
+fn validate_artifact_source(source: &SkillArtifactSource) -> SkillsResult<()> {
+    match source {
+        SkillArtifactSource::DriveFile {
+            drive_uri,
+            checksum_sha256,
+            ..
+        } => {
+            validate_drive_uri(drive_uri)?;
+            if !sha256_pattern().is_match(checksum_sha256) {
+                return Err(invalid(
+                    "checksum_sha256 must be 64 lowercase hexadecimal characters",
+                ));
+            }
+        }
+        SkillArtifactSource::DriveDirectory { drive_uri } => {
+            validate_drive_uri(drive_uri)?;
+        }
+        SkillArtifactSource::Git {
+            repository_url,
+            repository_path,
+            git_ref,
+        } => {
+            validate_git_repository_url(repository_url)?;
+            validate_git_repository_path(repository_path)?;
+            if let Some(value) = git_ref {
+                validate_git_ref(value)?;
+            }
+        }
+    }
+    Ok(())
+}
+
 pub fn validate_artifact_record(record: &SkillArtifactRecord) -> SkillsResult<()> {
     if record.status == SkillArtifactStatus::Yanked {
         return Err(invalid(
@@ -54,16 +153,7 @@ pub fn validate_artifact_record(record: &SkillArtifactRecord) -> SkillsResult<()
     if trim(&record.version_label).is_empty() || record.version_label.len() > 128 {
         return Err(invalid("version_label must contain 1 to 128 characters"));
     }
-    DriveUri::parse(&record.artifact_ref).map_err(|error| {
-        invalid(format!(
-            "artifact_ref must be a canonical Drive URI: {error}"
-        ))
-    })?;
-    if !sha256_pattern().is_match(&record.checksum_sha256) {
-        return Err(invalid(
-            "checksum_sha256 must be 64 lowercase hexadecimal characters",
-        ));
-    }
+    validate_artifact_source(&record.source)?;
     if trim(&record.entrypoint).is_empty() || record.entrypoint.len() > 255 {
         return Err(invalid("entrypoint must contain 1 to 255 characters"));
     }

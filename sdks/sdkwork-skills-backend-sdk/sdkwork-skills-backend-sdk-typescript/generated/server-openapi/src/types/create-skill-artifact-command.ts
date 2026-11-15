@@ -1,8 +1,8 @@
+import type { SkillArtifactSource } from './skill-artifact-source';
+
 export interface CreateSkillArtifactCommand {
   versionLabel: string;
-  artifactRef: string;
-  checksumSha256: string;
-  sizeBytes?: string | null;
+  source: SkillArtifactSource;
   invocationKind: 'local-workflow' | 'process-adapter' | 'mcp-tool' | 'kernel-provider';
   entrypoint: string;
   inputSchema?: Record<string, unknown>;

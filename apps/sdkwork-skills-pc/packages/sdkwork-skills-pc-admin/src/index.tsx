@@ -1,28 +1,23 @@
-import { useEffect, useId, useRef, useState, type FormEvent, type ReactNode } from 'react';
-import { isBlank, trim } from '@sdkwork/utils';
-import { isDriveArtifactRef } from '@sdkwork/skills-pc-commons/driveUri';
+import { useEffect, useId, useState, type FormEvent, type ReactNode } from 'react';
 import {
   useSkillsClients,
-  type CreateCategoryInput,
   type CreatePackageInput,
+  type SkillArtifactSource,
   type SkillCategoryRecord,
   type SkillPackageRecord,
 } from '@sdkwork/skills-pc-core';
 import {
   canManagePackagesInCategories,
-  createSkillCategory,
   createSkillPackage,
   deleteSkillPackage,
   listManagedSkillCategories,
   listManagedSkillPackages,
   normalizeAllowedRoleCodes,
-  packageManagePermissionForCategory,
-  updateSkillCategory,
   updateSkillPackage,
 } from '@sdkwork/skills-pc-admin-core';
 
-import { uploadSkillPackageArchive } from './services/skillPackageUploadService';
 import { ConfirmModal, SurfaceDrawer } from './components/SurfaceOverlay.tsx';
+import { ArtifactSourceField } from './components/ArtifactSourceField.tsx';
 import { CategoryMultiSelect } from './components/CategoryMultiSelect.tsx';
 import { RoleMultiSelect } from './components/RoleMultiSelect.tsx';
 import { useSkillsAdminCopy } from './copy/skillsAdminCopy';
@@ -44,6 +39,10 @@ export {
   type SelectionModalProps,
   type SelectionOption,
 } from './components/SelectionModal';
+export {
+  ArtifactSourceField,
+  type ArtifactSourceFieldProps,
+} from './components/ArtifactSourceField';
 
 const INPUT_CLASS =
   'w-full rounded-md border border-zinc-700 bg-zinc-800/60 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-60';
@@ -55,6 +54,12 @@ const PRIMARY_BUTTON_CLASS =
   'rounded-md bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-500 disabled:opacity-60';
 const ALERT_CLASS =
   'rounded-md border border-red-800 bg-red-950/50 px-3 py-2 text-sm text-red-400';
+
+type CreatePackageForm = Omit<CreatePackageInput, 'initialArtifact'> & {
+  initialArtifact: Omit<CreatePackageInput['initialArtifact'], 'source'> & {
+    source: SkillArtifactSource | null;
+  };
+};
 
 function Field({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {
   return (
@@ -77,21 +82,19 @@ export function AdminSkillsPage({
 }) {
   const copy = useSkillsAdminCopy();
   const clients = useSkillsClients();
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const createFormId = useId();
   const editFormId = useId();
   const [packages, setPackages] = useState<SkillPackageRecord[]>([]);
   const [categories, setCategories] = useState<SkillCategoryRecord[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const [uploading, setUploading] = useState(false);
   const [creating, setCreating] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [selectedFileName, setSelectedFileName] = useState<string | null>(null);
+  const [artifactSourceKey, setArtifactSourceKey] = useState(0);
   const [createOpen, setCreateOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<SkillPackageRecord | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<SkillPackageRecord | null>(null);
   const [deleting, setDeleting] = useState(false);
-  const [form, setForm] = useState<CreatePackageInput>({
+  const [form, setForm] = useState<CreatePackageForm>({
     skillKey: 'skill.demo.sample',
     packageKey: 'demo-sample',
     code: 'demo-sample',
@@ -104,9 +107,7 @@ export function AdminSkillsPage({
     visibility: 'tenant',
     initialArtifact: {
       versionLabel: '1.0.0',
-      artifactRef: '',
-      checksumSha256: '',
-      sizeBytes: null,
+      source: null,
       invocationKind: 'local-workflow',
       entrypoint: 'run',
       inputSchema: {},
@@ -154,42 +155,12 @@ export function AdminSkillsPage({
     setError(null);
   }
 
-  async function onUploadSelectedFile() {
-    const file = fileInputRef.current?.files?.[0];
-    if (!file) {
-      setError(copy.admin.errors.selectArchive);
-      return;
-    }
-    setUploading(true);
-    setError(null);
-    try {
-      const artifact = await uploadSkillPackageArchive(clients.drive, file);
-      setForm((current) => ({
-        ...current,
-        initialArtifact: {
-          ...current.initialArtifact,
-          artifactRef: artifact.artifactRef,
-          checksumSha256: artifact.checksumSha256,
-          sizeBytes: artifact.sizeBytes,
-        },
-      }));
-      setSelectedFileName(file.name);
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : String(cause));
-    } finally {
-      setUploading(false);
-    }
-  }
-
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
     setError(null);
-    if (!isDriveArtifactRef(form.initialArtifact.artifactRef)) {
+    const source = form.initialArtifact.source;
+    if (!source) {
       setError(copy.admin.errors.needArtifact);
-      return;
-    }
-    if (!/^[0-9a-f]{64}$/.test(form.initialArtifact.checksumSha256)) {
-      setError(copy.admin.errors.checksum);
       return;
     }
     const selectedCategories = form.categories ?? [];
@@ -204,10 +175,19 @@ export function AdminSkillsPage({
       setError(copy.admin.errors.noCategoryPermission);
       return;
     }
+    const input: CreatePackageInput = {
+      ...form,
+      initialArtifact: { ...form.initialArtifact, source },
+    };
     setCreating(true);
     try {
-      await createSkillPackage(clients, form);
+      await createSkillPackage(clients, input);
       setCreateOpen(false);
+      setArtifactSourceKey((key) => key + 1);
+      setForm((current) => ({
+        ...current,
+        initialArtifact: { ...current.initialArtifact, source: null },
+      }));
       await reload();
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : String(cause));
@@ -376,9 +356,7 @@ export function AdminSkillsPage({
               type="submit"
               form={createFormId}
               className={PRIMARY_BUTTON_CLASS}
-              disabled={
-                creating || uploading || isBlank(trim(form.initialArtifact.artifactRef))
-              }
+              disabled={creating || !form.initialArtifact.source}
             >
               {creating
                 ? copy.admin.createDrawer.submitting
@@ -424,41 +402,18 @@ export function AdminSkillsPage({
             onChange={(allowedRoleCodes) => setForm({ ...form, allowedRoleCodes })}
             disabled={creating}
           />
-          <fieldset className="rounded-lg border border-zinc-700 bg-zinc-800/40 p-3">
-            <legend className="px-1 text-xs font-medium uppercase tracking-wide text-zinc-400">
-              {copy.admin.createDrawer.artifactSection}
-            </legend>
-            <div className="grid gap-2">
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept=".zip,.tar,.gz,.tgz,.skillpkg,application/zip"
-                className="block w-full text-sm text-zinc-300 file:mr-3 file:rounded-md file:border-0 file:bg-zinc-700 file:px-3 file:py-1.5 file:text-sm file:text-zinc-200 hover:file:bg-zinc-600"
-              />
-              <button
-                type="button"
-                className={SECONDARY_BUTTON_CLASS}
-                onClick={onUploadSelectedFile}
-                disabled={uploading}
-              >
-                {uploading
-                  ? copy.admin.createDrawer.uploading
-                  : copy.admin.createDrawer.uploadArtifact}
-              </button>
-              {selectedFileName ? (
-                <p className="text-xs text-emerald-400">
-                  {copy.admin.createDrawer.uploadedFile(selectedFileName)}
-                </p>
-              ) : null}
-              <input
-                className={`${INPUT_CLASS} font-mono text-xs`}
-                value={form.initialArtifact.artifactRef}
-                readOnly
-                placeholder={copy.admin.createDrawer.artifactRefPlaceholder}
-                required
-              />
-            </div>
-          </fieldset>
+          <ArtifactSourceField
+            key={artifactSourceKey}
+            driveClient={clients.drive}
+            value={form.initialArtifact.source}
+            onChange={(source) =>
+              setForm((current) => ({
+                ...current,
+                initialArtifact: { ...current.initialArtifact, source },
+              }))
+            }
+            disabled={creating}
+          />
           <Field label={copy.admin.createDrawer.artifactVersion}>
             <input
               className={`${INPUT_CLASS} w-40`}

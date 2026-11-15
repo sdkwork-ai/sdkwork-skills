@@ -165,12 +165,10 @@ fn row_to_artifact(row: &sqlx::postgres::PgRow) -> SkillsResult<SkillArtifactRec
         tenant_id: int64_to_uint64(row.try_get("tenant_id").map_err(map_sqlx)?, "tenant_id")?,
         package_id: int64_to_uint64(row.try_get("package_id").map_err(map_sqlx)?, "package_id")?,
         version_label: row.try_get("version_label").map_err(map_sqlx)?,
-        artifact_ref: row.try_get("artifact_ref").map_err(map_sqlx)?,
-        checksum_sha256: row.try_get("checksum_sha256").map_err(map_sqlx)?,
-        size_bytes: optional_int64_to_uint64(
-            row.try_get("size_bytes").map_err(map_sqlx)?,
-            "size_bytes",
-        )?,
+        source: serde_json::from_str(&row.try_get::<String, _>("source_json").map_err(map_sqlx)?)
+            .map_err(|error| {
+            SkillsServiceError::Repository(format!("invalid artifact source json: {error}"))
+        })?,
         invocation_kind: invocation(
             &row.try_get::<String, _>("invocation_kind")
                 .map_err(map_sqlx)?,
@@ -279,8 +277,8 @@ const SKILL_SELECT: &str = r#"
 "#;
 
 const ARTIFACT_SELECT: &str = r#"
-    SELECT a.id, a.uuid, a.tenant_id, a.package_id, a.version_label, a.artifact_ref,
-           a.checksum_sha256, a.size_bytes, a.invocation_kind, a.entrypoint,
+    SELECT a.id, a.uuid, a.tenant_id, a.package_id, a.version_label, a.source_json,
+           a.invocation_kind, a.entrypoint,
            a.input_schema_json, a.output_schema_json, a.config_schema_json,
            a.default_config_json, a.security_profile_id, a.status,
            COALESCE((
@@ -1008,26 +1006,27 @@ async fn insert_artifact(
     artifact: SkillArtifactRecord,
 ) -> SkillsResult<i64> {
     let artifact_id = next_id(id_generator)?;
+    let source_json = serde_json::to_string(&artifact.source).map_err(|error| {
+        SkillsServiceError::Repository(format!("encode artifact source json failed: {error}"))
+    })?;
     let input_schema_json = json_value_to_text(&artifact.input_schema, "input_schema")?;
     let output_schema_json = json_value_to_text(&artifact.output_schema, "output_schema")?;
     let config_schema_json = json_value_to_text(&artifact.config_schema, "config_schema")?;
     let default_config_json = json_value_to_text(&artifact.default_config, "default_config")?;
     sqlx::query(
         "INSERT INTO skills_artifact (
-             id, uuid, tenant_id, package_id, version_label, artifact_ref, checksum_sha256,
-             size_bytes, invocation_kind, entrypoint, input_schema_json, output_schema_json,
+             id, uuid, tenant_id, package_id, version_label, source_json,
+             invocation_kind, entrypoint, input_schema_json, output_schema_json,
              config_schema_json, default_config_json, security_profile_id, status, published_at
-         ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,
-                   CASE WHEN $16='published' THEN CURRENT_TIMESTAMP ELSE NULL END)",
+         ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,
+                   CASE WHEN $14='published' THEN CURRENT_TIMESTAMP ELSE NULL END)",
     )
     .bind(artifact_id)
     .bind(new_uuid())
     .bind(uint64_to_int64(artifact.tenant_id, "tenant_id")?)
     .bind(uint64_to_int64(artifact.package_id, "package_id")?)
     .bind(&artifact.version_label)
-    .bind(&artifact.artifact_ref)
-    .bind(&artifact.checksum_sha256)
-    .bind(optional_uint64_to_int64(artifact.size_bytes, "size_bytes")?)
+    .bind(source_json)
     .bind(artifact.invocation_kind.as_str())
     .bind(&artifact.entrypoint)
     .bind(input_schema_json)

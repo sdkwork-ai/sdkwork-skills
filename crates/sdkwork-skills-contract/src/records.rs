@@ -7,6 +7,38 @@ use crate::enums::{
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(tag = "kind")]
+pub enum SkillArtifactSource {
+    #[serde(rename = "drive_file")]
+    DriveFile {
+        #[serde(rename = "driveUri")]
+        drive_uri: String,
+        #[serde(rename = "checksumSha256")]
+        checksum_sha256: String,
+        #[serde(
+            default,
+            rename = "sizeBytes",
+            with = "sdkwork_utils_rust::serde_uint64::option"
+        )]
+        size_bytes: Option<u64>,
+    },
+    #[serde(rename = "drive_directory")]
+    DriveDirectory {
+        #[serde(rename = "driveUri")]
+        drive_uri: String,
+    },
+    #[serde(rename = "git")]
+    Git {
+        #[serde(rename = "repositoryUrl")]
+        repository_url: String,
+        #[serde(rename = "repositoryPath")]
+        repository_path: String,
+        #[serde(default, rename = "gitRef")]
+        git_ref: Option<String>,
+    },
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SkillArtifactRecord {
     #[serde(with = "sdkwork_utils_rust::serde_uint64")]
@@ -17,10 +49,7 @@ pub struct SkillArtifactRecord {
     #[serde(with = "sdkwork_utils_rust::serde_uint64")]
     pub package_id: u64,
     pub version_label: String,
-    pub artifact_ref: String,
-    pub checksum_sha256: String,
-    #[serde(with = "sdkwork_utils_rust::serde_uint64::option")]
-    pub size_bytes: Option<u64>,
+    pub source: SkillArtifactSource,
     pub invocation_kind: SkillInvocationKind,
     pub entrypoint: String,
     pub input_schema: Value,
