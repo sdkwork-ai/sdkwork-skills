@@ -11,5 +11,7 @@ export {
   updateSkillCapability,
   updateSkillCategory,
   updateSkillPackage,
+  type ManagedSkillArtifactsListParams,
+  type ManagedSkillCategoriesListParams,
   type ManagedSkillPackagesListParams,
 } from './skillsBackendService';

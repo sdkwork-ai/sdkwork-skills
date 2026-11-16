@@ -31,7 +31,9 @@ export function PackageArtifactsPage() {
   });
 
   async function reload() {
-    const page = await listPackageArtifacts(clients, packageId);
+    // The artifacts table renders every version, so the request asks for the
+    // maximum page the backend serves instead of the default 20-row window.
+    const page = await listPackageArtifacts(clients, packageId, { pageSize: 200 });
     setArtifacts(page.items);
   }
 

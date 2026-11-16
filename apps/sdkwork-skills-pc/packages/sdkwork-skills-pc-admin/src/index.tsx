@@ -72,6 +72,29 @@ function Field({ label, hint, children }: { label: string; hint?: string; childr
   );
 }
 
+/**
+ * Visible category options for the filter select.
+ *
+ * A category can be hidden or retired after it was selected; keeping the
+ * selected value as an option prevents the select from rendering blank while
+ * the package list stays filtered by that code.
+ */
+function activeCategoryOptions(
+  categories: readonly SkillCategoryRecord[],
+  selected: string,
+): { value: string; label: string }[] {
+  const options = categories
+    .filter((category) => category.visible && category.status === 1)
+    .slice()
+    .sort((left, right) => left.sortWeight - right.sortWeight)
+    .map((category) => ({ value: category.code, label: category.name }));
+  if (selected.length > 0 && !options.some((option) => option.value === selected)) {
+    const retained = categories.find((category) => category.code === selected);
+    options.push({ value: selected, label: retained?.name ?? selected });
+  }
+  return options;
+}
+
 export function AdminSkillsPage({
   grantedPermissions = [],
   roleCodes = [],
@@ -106,7 +129,10 @@ export function AdminSkillsPage({
     [roleCodes],
   );
   const listParams = useMemo<ManagedSkillPackagesListParams | undefined>(() => {
-    const params: NonNullable<ManagedSkillPackagesListParams> = {};
+    // The tables render the whole filtered list, so the request asks for the
+    // maximum page the backend serves (`MAX_LIST_PAGE_SIZE`); without it the
+    // default window would silently hide everything past the first 20 rows.
+    const params: NonNullable<ManagedSkillPackagesListParams> = { pageSize: 200 };
     if (keyword.trim().length > 0) {
       params.q = keyword.trim();
     }
@@ -116,7 +142,7 @@ export function AdminSkillsPage({
     if (roleScope === 'mine' && usableRoleCodes.length > 0) {
       params.roleCodes = [...usableRoleCodes].sort().join(',');
     }
-    return Object.keys(params).length > 0 ? params : undefined;
+    return params;
   }, [keyword, categoryCode, roleScope, usableRoleCodes]);
   const [form, setForm] = useState<CreatePackageForm>({
     skillKey: 'skill.demo.sample',
@@ -146,7 +172,8 @@ export function AdminSkillsPage({
   async function reload() {
     const [packagePage, categoryPage] = await Promise.all([
       listManagedSkillPackages(clients, listParams),
-      listManagedSkillCategories(clients),
+      // The category filter needs the full registry, not the default window.
+      listManagedSkillCategories(clients, { pageSize: 200 }),
     ]);
     setPackages(packagePage.items);
     setCategories(categoryPage.items);
@@ -304,15 +331,11 @@ export function AdminSkillsPage({
             onChange={(event) => setCategoryCode(event.target.value)}
           >
             <option value="">{copy.admin.filters.allCategories}</option>
-            {categories
-              .filter((category) => category.visible && category.status === 1)
-              .slice()
-              .sort((left, right) => left.sortWeight - right.sortWeight)
-              .map((category) => (
-                <option key={category.id} value={category.code}>
-                  {category.name}
-                </option>
-              ))}
+            {activeCategoryOptions(categories, categoryCode).map((category) => (
+              <option key={category.value} value={category.value}>
+                {category.label}
+              </option>
+            ))}
           </select>
         </label>
         <div className="grid gap-1 text-sm">

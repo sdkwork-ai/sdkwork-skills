@@ -30,6 +30,16 @@ export type ManagedSkillPackagesListParams = Parameters<
   SkillsBackendClients['backend']['skills']['skillPackages']['list']
 >[0];
 
+/** Category list query parameters of the generated backend client. */
+export type ManagedSkillCategoriesListParams = Parameters<
+  SkillsBackendClients['backend']['skills']['skillCategories']['list']
+>[0];
+
+/** Artifact list query parameters of the generated backend client. */
+export type ManagedSkillArtifactsListParams = Parameters<
+  SkillsBackendClients['backend']['skills']['skillPackages']['artifacts']['list']
+>[1];
+
 export async function listManagedSkillPackages(
   clients: SkillsBackendClients,
   params?: ManagedSkillPackagesListParams,
@@ -39,8 +49,9 @@ export async function listManagedSkillPackages(
 
 export async function listManagedSkillCategories(
   clients: SkillsBackendClients,
+  params?: ManagedSkillCategoriesListParams,
 ): Promise<SkillCategoriesPageData> {
-  return clients.backend.skills.skillCategories.list();
+  return clients.backend.skills.skillCategories.list(params);
 }
 
 export async function createSkillPackage(
@@ -68,8 +79,9 @@ export async function deleteSkillPackage(
 export async function listPackageArtifacts(
   clients: SkillsBackendClients,
   packageId: string,
+  params?: ManagedSkillArtifactsListParams,
 ): Promise<SkillArtifactsPageData> {
-  return clients.backend.skills.skillPackages.artifacts.list(packageId);
+  return clients.backend.skills.skillPackages.artifacts.list(packageId, params);
 }
 
 export async function createSkillArtifact(

@@ -62,7 +62,14 @@ impl SdkWorkListQuery {
     pub fn offset_params(&self) -> Result<OffsetListPageParams, ApiProblem> {
         validated_offset_list_params(self.page.map(i64::from), self.page_size.map(i64::from))
             .map_err(|_| {
-                ApiProblem::bad_request("page must be >= 1 and page_size must be between 1 and 200")
+                // `40003 INVALID_PARAMETER`: an out-of-range window is rejected
+                // rather than clamped, so a caller asking for more rows than the
+                // operation serves sees the failure instead of a shorter page.
+                ApiProblem::invalid_parameter(format!(
+                    "page must be between 1 and {}, page_size must be between 1 and {}",
+                    sdkwork_utils_rust::http_api::MAX_LIST_PAGE,
+                    sdkwork_utils_rust::http_api::MAX_LIST_PAGE_SIZE
+                ))
             })
     }
 

@@ -342,16 +342,11 @@ fn catalog_role_scope_predicate(role_param: &str) -> String {
     )
 }
 
-pub async fn list_skill_packages_page(
-    pool: &PgPool,
-    tenant_id: u64,
-    params: OffsetListPageParams,
-    keyword: Option<&str>,
-    filter: &CatalogViewFilter,
-) -> SkillsResult<(Vec<SkillPackageRecord>, i64)> {
+/// Paged skill package listing over `PACKAGE_SELECT`.
+fn skill_packages_page_sql() -> String {
     let category_predicate = catalog_category_predicate("$5");
     let role_predicate = catalog_role_scope_predicate("$6");
-    let sql = format!(
+    format!(
         "SELECT package_rows.*, COUNT(*) OVER() AS {LIST_TOTAL_SQL_COLUMN}
          FROM ({PACKAGE_SELECT}
                WHERE p.tenant_id = $1 AND p.deleted_at IS NULL AND p.status <> 4
@@ -360,7 +355,17 @@ pub async fn list_skill_packages_page(
                  AND {role_predicate}
          ) package_rows
          ORDER BY featured DESC, sort_weight DESC, updated_at DESC, code ASC LIMIT $3 OFFSET $4"
-    );
+    )
+}
+
+pub async fn list_skill_packages_page(
+    pool: &PgPool,
+    tenant_id: u64,
+    params: OffsetListPageParams,
+    keyword: Option<&str>,
+    filter: &CatalogViewFilter,
+) -> SkillsResult<(Vec<SkillPackageRecord>, i64)> {
+    let sql = skill_packages_page_sql();
     let rows = sqlx::query(sqlx::AssertSqlSafe(sql.as_str()))
         .bind(uint64_to_int64(tenant_id, "tenant_id")?)
         .bind(search_pattern(keyword))
@@ -371,7 +376,34 @@ pub async fn list_skill_packages_page(
         .fetch_all(pool)
         .await
         .map_err(map_sqlx)?;
-    page(rows, row_to_package)
+    let (items, mut total) = page(rows, row_to_package)?;
+    if needs_first_page_refetch(items.len(), params.offset) {
+        let first_page_row = sqlx::query(sqlx::AssertSqlSafe(sql.as_str()))
+            .bind(uint64_to_int64(tenant_id, "tenant_id")?)
+            .bind(search_pattern(keyword))
+            .bind(1_i64)
+            .bind(0_i64)
+            .bind(filter.category_code())
+            .bind(filter.role_codes().to_vec())
+            .fetch_optional(pool)
+            .await
+            .map_err(map_sqlx)?;
+        total = first_page_row.as_ref().map(row_total).unwrap_or(0);
+    }
+    Ok((items, total))
+}
+
+/// Paged owner-scoped skill package listing over `PACKAGE_SELECT`.
+fn owned_skill_packages_page_sql() -> String {
+    format!(
+        "SELECT package_rows.*, COUNT(*) OVER() AS {LIST_TOTAL_SQL_COLUMN}
+         FROM ({PACKAGE_SELECT}
+               WHERE p.tenant_id = $1 AND p.owner_user_id = $2 AND p.deleted_at IS NULL
+                 AND p.status <> 4
+                 AND ($3 = '%' OR p.display_name ILIKE $3 OR p.package_key ILIKE $3 OR p.code ILIKE $3)
+         ) package_rows
+         ORDER BY updated_at DESC, code ASC LIMIT $4 OFFSET $5"
+    )
 }
 
 pub async fn list_owned_skill_packages_page(
@@ -381,15 +413,7 @@ pub async fn list_owned_skill_packages_page(
     params: OffsetListPageParams,
     keyword: Option<&str>,
 ) -> SkillsResult<(Vec<SkillPackageRecord>, i64)> {
-    let sql = format!(
-        "SELECT package_rows.*, COUNT(*) OVER() AS {LIST_TOTAL_SQL_COLUMN}
-         FROM ({PACKAGE_SELECT}
-               WHERE p.tenant_id = $1 AND p.owner_user_id = $2 AND p.deleted_at IS NULL
-                 AND p.status <> 4
-                 AND ($3 = '%' OR p.display_name ILIKE $3 OR p.package_key ILIKE $3 OR p.code ILIKE $3)
-         ) package_rows
-         ORDER BY updated_at DESC, code ASC LIMIT $4 OFFSET $5"
-    );
+    let sql = owned_skill_packages_page_sql();
     let rows = sqlx::query(sqlx::AssertSqlSafe(sql.as_str()))
         .bind(uint64_to_int64(tenant_id, "tenant_id")?)
         .bind(uint64_to_int64(owner_user_id, "owner_user_id")?)
@@ -399,7 +423,20 @@ pub async fn list_owned_skill_packages_page(
         .fetch_all(pool)
         .await
         .map_err(map_sqlx)?;
-    page(rows, row_to_package)
+    let (items, mut total) = page(rows, row_to_package)?;
+    if needs_first_page_refetch(items.len(), params.offset) {
+        let first_page_row = sqlx::query(sqlx::AssertSqlSafe(sql.as_str()))
+            .bind(uint64_to_int64(tenant_id, "tenant_id")?)
+            .bind(uint64_to_int64(owner_user_id, "owner_user_id")?)
+            .bind(search_pattern(keyword))
+            .bind(1_i64)
+            .bind(0_i64)
+            .fetch_optional(pool)
+            .await
+            .map_err(map_sqlx)?;
+        total = first_page_row.as_ref().map(row_total).unwrap_or(0);
+    }
+    Ok((items, total))
 }
 
 pub async fn get_skill_package(
@@ -422,18 +459,11 @@ pub async fn get_skill_package(
         .ok_or_else(|| SkillsServiceError::NotFound(format!("skill package {package_id}")))
 }
 
-pub async fn list_marketplace_skill_packages_page(
-    pool: &PgPool,
-    tenant_id: u64,
-    organization_id: u64,
-    user_id: u64,
-    params: OffsetListPageParams,
-    keyword: Option<&str>,
-    filter: &CatalogViewFilter,
-) -> SkillsResult<(Vec<SkillPackageRecord>, i64)> {
+/// Paged marketplace skill package listing over `PACKAGE_SELECT`.
+fn marketplace_skill_packages_page_sql() -> String {
     let category_predicate = catalog_category_predicate("$7");
     let role_predicate = catalog_role_scope_predicate("$8");
-    let sql = format!(
+    format!(
         "SELECT package_rows.*, COUNT(*) OVER() AS {LIST_TOTAL_SQL_COLUMN}
          FROM ({PACKAGE_SELECT}
                WHERE p.tenant_id = $1 AND p.deleted_at IS NULL AND p.status = 1
@@ -445,7 +475,19 @@ pub async fn list_marketplace_skill_packages_page(
                  AND {role_predicate}
          ) package_rows
          ORDER BY featured DESC, sort_weight DESC, updated_at DESC, code ASC LIMIT $5 OFFSET $6"
-    );
+    )
+}
+
+pub async fn list_marketplace_skill_packages_page(
+    pool: &PgPool,
+    tenant_id: u64,
+    organization_id: u64,
+    user_id: u64,
+    params: OffsetListPageParams,
+    keyword: Option<&str>,
+    filter: &CatalogViewFilter,
+) -> SkillsResult<(Vec<SkillPackageRecord>, i64)> {
+    let sql = marketplace_skill_packages_page_sql();
     let rows = sqlx::query(sqlx::AssertSqlSafe(sql.as_str()))
         .bind(uint64_to_int64(tenant_id, "tenant_id")?)
         .bind(uint64_to_int64(organization_id, "organization_id")?)
@@ -458,7 +500,23 @@ pub async fn list_marketplace_skill_packages_page(
         .fetch_all(pool)
         .await
         .map_err(map_sqlx)?;
-    page(rows, row_to_package)
+    let (items, mut total) = page(rows, row_to_package)?;
+    if needs_first_page_refetch(items.len(), params.offset) {
+        let first_page_row = sqlx::query(sqlx::AssertSqlSafe(sql.as_str()))
+            .bind(uint64_to_int64(tenant_id, "tenant_id")?)
+            .bind(uint64_to_int64(organization_id, "organization_id")?)
+            .bind(uint64_to_int64(user_id, "user_id")?)
+            .bind(search_pattern(keyword))
+            .bind(1_i64)
+            .bind(0_i64)
+            .bind(filter.category_code())
+            .bind(filter.role_codes().to_vec())
+            .fetch_optional(pool)
+            .await
+            .map_err(map_sqlx)?;
+        total = first_page_row.as_ref().map(row_total).unwrap_or(0);
+    }
+    Ok((items, total))
 }
 
 pub async fn get_marketplace_skill_package(
@@ -490,18 +548,11 @@ pub async fn get_marketplace_skill_package(
         .ok_or_else(|| SkillsServiceError::NotFound(format!("skill package {package_id}")))
 }
 
-pub async fn list_skills_page(
-    pool: &PgPool,
-    tenant_id: u64,
-    organization_id: u64,
-    user_id: u64,
-    params: OffsetListPageParams,
-    keyword: Option<&str>,
-    filter: &CatalogViewFilter,
-) -> SkillsResult<(Vec<SkillRecord>, i64)> {
+/// Paged marketplace skill listing over `SKILL_SELECT`.
+fn skills_page_sql() -> String {
     let category_predicate = catalog_category_predicate("$7");
     let role_predicate = catalog_role_scope_predicate("$8");
-    let sql = format!(
+    format!(
         "SELECT skill_rows.*, COUNT(*) OVER() AS {LIST_TOTAL_SQL_COLUMN}
          FROM ({SKILL_SELECT}
                WHERE s.tenant_id = $1 AND s.deleted_at IS NULL AND s.enabled = 1
@@ -514,7 +565,19 @@ pub async fn list_skills_page(
                  AND {role_predicate}
          ) skill_rows
          ORDER BY featured DESC, updated_at DESC, skill_key ASC LIMIT $5 OFFSET $6"
-    );
+    )
+}
+
+pub async fn list_skills_page(
+    pool: &PgPool,
+    tenant_id: u64,
+    organization_id: u64,
+    user_id: u64,
+    params: OffsetListPageParams,
+    keyword: Option<&str>,
+    filter: &CatalogViewFilter,
+) -> SkillsResult<(Vec<SkillRecord>, i64)> {
+    let sql = skills_page_sql();
     let rows = sqlx::query(sqlx::AssertSqlSafe(sql.as_str()))
         .bind(uint64_to_int64(tenant_id, "tenant_id")?)
         .bind(uint64_to_int64(organization_id, "organization_id")?)
@@ -527,7 +590,23 @@ pub async fn list_skills_page(
         .fetch_all(pool)
         .await
         .map_err(map_sqlx)?;
-    page(rows, row_to_skill)
+    let (items, mut total) = page(rows, row_to_skill)?;
+    if needs_first_page_refetch(items.len(), params.offset) {
+        let first_page_row = sqlx::query(sqlx::AssertSqlSafe(sql.as_str()))
+            .bind(uint64_to_int64(tenant_id, "tenant_id")?)
+            .bind(uint64_to_int64(organization_id, "organization_id")?)
+            .bind(uint64_to_int64(user_id, "user_id")?)
+            .bind(search_pattern(keyword))
+            .bind(1_i64)
+            .bind(0_i64)
+            .bind(filter.category_code())
+            .bind(filter.role_codes().to_vec())
+            .fetch_optional(pool)
+            .await
+            .map_err(map_sqlx)?;
+        total = first_page_row.as_ref().map(row_total).unwrap_or(0);
+    }
+    Ok((items, total))
 }
 
 pub async fn get_skill(
@@ -560,14 +639,34 @@ pub async fn get_skill(
         .ok_or_else(|| SkillsServiceError::NotFound(skill_key.to_string()))
 }
 
+/// Whether an empty page has to re-read the first row to recover the total.
+///
+/// [`page`] only sees the `COUNT(*) OVER()` total when the window returns at
+/// least one row, so a page past the end would otherwise report `0`. The paged
+/// readers then re-run their statement as `LIMIT 1 OFFSET 0`, which keeps the
+/// reported total independent of the requested page. Page one never needs the
+/// extra round trip: an empty first page really has no matching rows.
+fn needs_first_page_refetch(items_len: usize, offset: i64) -> bool {
+    items_len == 0 && offset > 0
+}
+
+/// Reads the window total (`LIST_TOTAL_SQL_COLUMN`) carried by one paged row.
+fn row_total(row: &sqlx::postgres::PgRow) -> i64 {
+    row.try_get::<i64, _>(LIST_TOTAL_SQL_COLUMN).unwrap_or(0)
+}
+
+/// Splits a paged result set into its items and exact total.
+///
+/// The total is the `COUNT(*) OVER()` column the paged listings select, so it is
+/// exact for any page that returns rows. An empty result reports `0` here
+/// because no row carries the total; the paged readers then re-read the first
+/// row via [`needs_first_page_refetch`] so the reported total does not depend on
+/// the requested page.
 fn page<T>(
     rows: Vec<sqlx::postgres::PgRow>,
     mapper: fn(&sqlx::postgres::PgRow) -> SkillsResult<T>,
 ) -> SkillsResult<(Vec<T>, i64)> {
-    let total = rows
-        .first()
-        .and_then(|row| row.try_get::<i64, _>(LIST_TOTAL_SQL_COLUMN).ok())
-        .unwrap_or(0);
+    let total = rows.first().map(row_total).unwrap_or(0);
     let items = rows.iter().map(mapper).collect::<SkillsResult<Vec<_>>>()?;
     Ok((items, total))
 }
@@ -595,15 +694,9 @@ pub async fn get_category(
         .ok_or_else(|| SkillsServiceError::NotFound(format!("skill category {category_id}")))
 }
 
-pub async fn list_categories_page(
-    pool: &PgPool,
-    tenant_id: u64,
-    category_type: &str,
-    params: OffsetListPageParams,
-    keyword: Option<&str>,
-    visible_only: bool,
-) -> SkillsResult<(Vec<SkillCategoryRecord>, i64)> {
-    let sql = format!(
+/// Paged skill category listing.
+fn categories_page_sql() -> String {
+    format!(
         "SELECT id, uuid, tenant_id, organization_id, category_type, code, name, description,
                 parent_id, sort_weight, permission_code, visible, status, version,
                 created_at, updated_at,
@@ -613,7 +706,18 @@ pub async fn list_categories_page(
            AND ($3 = '%' OR name ILIKE $3 OR code ILIKE $3)
            AND (NOT $6::boolean OR (visible = 1 AND status = 1))
          ORDER BY sort_weight ASC, code ASC LIMIT $4 OFFSET $5"
-    );
+    )
+}
+
+pub async fn list_categories_page(
+    pool: &PgPool,
+    tenant_id: u64,
+    category_type: &str,
+    params: OffsetListPageParams,
+    keyword: Option<&str>,
+    visible_only: bool,
+) -> SkillsResult<(Vec<SkillCategoryRecord>, i64)> {
+    let sql = categories_page_sql();
     let rows = sqlx::query(sqlx::AssertSqlSafe(sql.as_str()))
         .bind(category_type)
         .bind(uint64_to_int64(tenant_id, "tenant_id")?)
@@ -624,7 +728,21 @@ pub async fn list_categories_page(
         .fetch_all(pool)
         .await
         .map_err(map_sqlx)?;
-    page(rows, row_to_category)
+    let (items, mut total) = page(rows, row_to_category)?;
+    if needs_first_page_refetch(items.len(), params.offset) {
+        let first_page_row = sqlx::query(sqlx::AssertSqlSafe(sql.as_str()))
+            .bind(category_type)
+            .bind(uint64_to_int64(tenant_id, "tenant_id")?)
+            .bind(search_pattern(keyword))
+            .bind(1_i64)
+            .bind(0_i64)
+            .bind(visible_only)
+            .fetch_optional(pool)
+            .await
+            .map_err(map_sqlx)?;
+        total = first_page_row.as_ref().map(row_total).unwrap_or(0);
+    }
+    Ok((items, total))
 }
 
 pub async fn upsert_category(
@@ -686,13 +804,9 @@ pub async fn upsert_category(
     row_to_category(&row)
 }
 
-pub async fn list_capabilities_page(
-    pool: &PgPool,
-    tenant_id: u64,
-    params: OffsetListPageParams,
-    keyword: Option<&str>,
-) -> SkillsResult<(Vec<SkillCapabilityRecord>, i64)> {
-    let sql = format!(
+/// Paged skill capability listing.
+fn capabilities_page_sql() -> String {
+    format!(
         "SELECT id, uuid, tenant_id, organization_id, capability_key, display_name,
                 description, risk_level, status, version, created_at, updated_at,
                 COUNT(*) OVER() AS {LIST_TOTAL_SQL_COLUMN}
@@ -700,7 +814,16 @@ pub async fn list_capabilities_page(
          WHERE tenant_id IN (0,$1) AND deleted_at IS NULL
            AND ($2='%' OR capability_key ILIKE $2 OR display_name ILIKE $2)
          ORDER BY capability_key ASC LIMIT $3 OFFSET $4"
-    );
+    )
+}
+
+pub async fn list_capabilities_page(
+    pool: &PgPool,
+    tenant_id: u64,
+    params: OffsetListPageParams,
+    keyword: Option<&str>,
+) -> SkillsResult<(Vec<SkillCapabilityRecord>, i64)> {
+    let sql = capabilities_page_sql();
     let rows = sqlx::query(sqlx::AssertSqlSafe(sql.as_str()))
         .bind(uint64_to_int64(tenant_id, "tenant_id")?)
         .bind(search_pattern(keyword))
@@ -709,7 +832,19 @@ pub async fn list_capabilities_page(
         .fetch_all(pool)
         .await
         .map_err(map_sqlx)?;
-    page(rows, row_to_capability)
+    let (items, mut total) = page(rows, row_to_capability)?;
+    if needs_first_page_refetch(items.len(), params.offset) {
+        let first_page_row = sqlx::query(sqlx::AssertSqlSafe(sql.as_str()))
+            .bind(uint64_to_int64(tenant_id, "tenant_id")?)
+            .bind(search_pattern(keyword))
+            .bind(1_i64)
+            .bind(0_i64)
+            .fetch_optional(pool)
+            .await
+            .map_err(map_sqlx)?;
+        total = first_page_row.as_ref().map(row_total).unwrap_or(0);
+    }
+    Ok((items, total))
 }
 
 pub async fn get_capability(
@@ -783,17 +918,22 @@ pub async fn upsert_capability(
     row_to_capability(&row)
 }
 
+/// Paged artifact listing for one package over `ARTIFACT_SELECT`.
+fn artifacts_page_sql() -> String {
+    format!(
+        "SELECT artifact_rows.*, COUNT(*) OVER() AS {LIST_TOTAL_SQL_COLUMN}
+         FROM ({ARTIFACT_SELECT} WHERE a.tenant_id=$1 AND a.package_id=$2) artifact_rows
+         ORDER BY created_at DESC, id DESC LIMIT $3 OFFSET $4"
+    )
+}
+
 pub async fn list_artifacts_page(
     pool: &PgPool,
     tenant_id: u64,
     package_id: u64,
     params: OffsetListPageParams,
 ) -> SkillsResult<(Vec<SkillArtifactRecord>, i64)> {
-    let sql = format!(
-        "SELECT artifact_rows.*, COUNT(*) OVER() AS {LIST_TOTAL_SQL_COLUMN}
-         FROM ({ARTIFACT_SELECT} WHERE a.tenant_id=$1 AND a.package_id=$2) artifact_rows
-         ORDER BY created_at DESC, id DESC LIMIT $3 OFFSET $4"
-    );
+    let sql = artifacts_page_sql();
     let rows = sqlx::query(sqlx::AssertSqlSafe(sql.as_str()))
         .bind(uint64_to_int64(tenant_id, "tenant_id")?)
         .bind(uint64_to_int64(package_id, "package_id")?)
@@ -802,18 +942,24 @@ pub async fn list_artifacts_page(
         .fetch_all(pool)
         .await
         .map_err(map_sqlx)?;
-    page(rows, row_to_artifact)
+    let (items, mut total) = page(rows, row_to_artifact)?;
+    if needs_first_page_refetch(items.len(), params.offset) {
+        let first_page_row = sqlx::query(sqlx::AssertSqlSafe(sql.as_str()))
+            .bind(uint64_to_int64(tenant_id, "tenant_id")?)
+            .bind(uint64_to_int64(package_id, "package_id")?)
+            .bind(1_i64)
+            .bind(0_i64)
+            .fetch_optional(pool)
+            .await
+            .map_err(map_sqlx)?;
+        total = first_page_row.as_ref().map(row_total).unwrap_or(0);
+    }
+    Ok((items, total))
 }
 
-pub async fn list_installable_artifacts_page(
-    pool: &PgPool,
-    tenant_id: u64,
-    organization_id: u64,
-    user_id: u64,
-    package_id: u64,
-    params: OffsetListPageParams,
-) -> SkillsResult<(Vec<SkillArtifactRecord>, i64)> {
-    let sql = format!(
+/// Paged installable artifact listing for a package visible to the caller.
+fn installable_artifacts_page_sql() -> String {
+    format!(
         "SELECT artifact_rows.*, COUNT(*) OVER() AS {LIST_TOTAL_SQL_COLUMN}
          FROM ({ARTIFACT_SELECT}
                JOIN skills_package p
@@ -828,7 +974,18 @@ pub async fn list_installable_artifacts_page(
                       OR (p.visibility=0 AND p.owner_user_id=$4))
          ) artifact_rows
          ORDER BY published_at DESC, created_at DESC, id DESC LIMIT $5 OFFSET $6"
-    );
+    )
+}
+
+pub async fn list_installable_artifacts_page(
+    pool: &PgPool,
+    tenant_id: u64,
+    organization_id: u64,
+    user_id: u64,
+    package_id: u64,
+    params: OffsetListPageParams,
+) -> SkillsResult<(Vec<SkillArtifactRecord>, i64)> {
+    let sql = installable_artifacts_page_sql();
     let rows = sqlx::query(sqlx::AssertSqlSafe(sql.as_str()))
         .bind(uint64_to_int64(tenant_id, "tenant_id")?)
         .bind(uint64_to_int64(package_id, "package_id")?)
@@ -839,7 +996,21 @@ pub async fn list_installable_artifacts_page(
         .fetch_all(pool)
         .await
         .map_err(map_sqlx)?;
-    page(rows, row_to_artifact)
+    let (items, mut total) = page(rows, row_to_artifact)?;
+    if needs_first_page_refetch(items.len(), params.offset) {
+        let first_page_row = sqlx::query(sqlx::AssertSqlSafe(sql.as_str()))
+            .bind(uint64_to_int64(tenant_id, "tenant_id")?)
+            .bind(uint64_to_int64(package_id, "package_id")?)
+            .bind(uint64_to_int64(organization_id, "organization_id")?)
+            .bind(uint64_to_int64(user_id, "user_id")?)
+            .bind(1_i64)
+            .bind(0_i64)
+            .fetch_optional(pool)
+            .await
+            .map_err(map_sqlx)?;
+        total = first_page_row.as_ref().map(row_total).unwrap_or(0);
+    }
+    Ok((items, total))
 }
 
 pub async fn create_artifact(
@@ -1299,6 +1470,18 @@ async fn get_installation(
         })
 }
 
+/// Paged installation listing for one subject over `INSTALLATION_SELECT`.
+fn installations_page_sql() -> String {
+    format!(
+        "SELECT installation_rows.*, COUNT(*) OVER() AS {LIST_TOTAL_SQL_COLUMN}
+         FROM ({INSTALLATION_SELECT}
+               WHERE i.tenant_id=$1 AND i.organization_id=$2
+                 AND i.subject_kind=$3 AND i.subject_id=$4 AND i.deleted_at IS NULL
+         ) installation_rows
+         ORDER BY updated_at DESC, id DESC LIMIT $5 OFFSET $6"
+    )
+}
+
 pub async fn list_installations_page(
     pool: &PgPool,
     tenant_id: u64,
@@ -1307,14 +1490,7 @@ pub async fn list_installations_page(
     subject_id: u64,
     params: OffsetListPageParams,
 ) -> SkillsResult<(Vec<SkillInstallationRecord>, i64)> {
-    let sql = format!(
-        "SELECT installation_rows.*, COUNT(*) OVER() AS {LIST_TOTAL_SQL_COLUMN}
-         FROM ({INSTALLATION_SELECT}
-               WHERE i.tenant_id=$1 AND i.organization_id=$2
-                 AND i.subject_kind=$3 AND i.subject_id=$4 AND i.deleted_at IS NULL
-         ) installation_rows
-         ORDER BY updated_at DESC, id DESC LIMIT $5 OFFSET $6"
-    );
+    let sql = installations_page_sql();
     let rows = sqlx::query(sqlx::AssertSqlSafe(sql.as_str()))
         .bind(uint64_to_int64(tenant_id, "tenant_id")?)
         .bind(uint64_to_int64(organization_id, "organization_id")?)
@@ -1325,7 +1501,21 @@ pub async fn list_installations_page(
         .fetch_all(pool)
         .await
         .map_err(map_sqlx)?;
-    page(rows, row_to_installation)
+    let (items, mut total) = page(rows, row_to_installation)?;
+    if needs_first_page_refetch(items.len(), params.offset) {
+        let first_page_row = sqlx::query(sqlx::AssertSqlSafe(sql.as_str()))
+            .bind(uint64_to_int64(tenant_id, "tenant_id")?)
+            .bind(uint64_to_int64(organization_id, "organization_id")?)
+            .bind(subject_kind_value)
+            .bind(uint64_to_int64(subject_id, "subject_id")?)
+            .bind(1_i64)
+            .bind(0_i64)
+            .fetch_optional(pool)
+            .await
+            .map_err(map_sqlx)?;
+        total = first_page_row.as_ref().map(row_total).unwrap_or(0);
+    }
+    Ok((items, total))
 }
 
 fn package_market_status(status: SkillLifecycleStatus) -> &'static str {
@@ -1343,5 +1533,53 @@ fn package_review_status(status: SkillLifecycleStatus) -> &'static str {
         "approved"
     } else {
         "pending"
+    }
+}
+
+#[cfg(test)]
+mod page_tests {
+    use super::*;
+
+    /// Every paged listing has to select the window total that the in-range path
+    /// reads and the past-the-end fallback re-reads, and has to keep its page
+    /// window as the statement's last two placeholders so the fallback can swap
+    /// in `LIMIT 1 OFFSET 0` without touching any other bind.
+    #[test]
+    fn paged_listings_select_the_window_total() {
+        let statements = [
+            skill_packages_page_sql(),
+            owned_skill_packages_page_sql(),
+            marketplace_skill_packages_page_sql(),
+            skills_page_sql(),
+            categories_page_sql(),
+            capabilities_page_sql(),
+            artifacts_page_sql(),
+            installable_artifacts_page_sql(),
+            installations_page_sql(),
+        ];
+        let total_column = format!("COUNT(*) OVER() AS {LIST_TOTAL_SQL_COLUMN}");
+        for sql in statements {
+            assert_eq!(
+                sql.matches(total_column.as_str()).count(),
+                1,
+                "paged listing must select exactly one window total: {sql}"
+            );
+            assert!(
+                sql.contains("LIMIT $"),
+                "paged listing must keep a parameterized page size: {sql}"
+            );
+            let offset_placeholder = sql.trim_end().rsplit("OFFSET $").next().unwrap_or_default();
+            assert!(
+                offset_placeholder.parse::<i64>().is_ok(),
+                "paged listing must end with its offset placeholder: {sql}"
+            );
+        }
+    }
+
+    #[test]
+    fn refetch_runs_only_for_an_empty_page_past_the_first() {
+        assert!(needs_first_page_refetch(0, 20));
+        assert!(!needs_first_page_refetch(0, 0));
+        assert!(!needs_first_page_refetch(1, 20));
     }
 }

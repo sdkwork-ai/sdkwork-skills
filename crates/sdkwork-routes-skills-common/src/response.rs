@@ -3,7 +3,9 @@ use axum::{
     response::{IntoResponse, Response},
     Json,
 };
-use sdkwork_utils_rust::{SdkWorkApiResponse, SdkWorkResourceData};
+use sdkwork_utils_rust::{
+    SdkWorkApiResponse, SdkWorkProblemDetail, SdkWorkResourceData, SdkWorkResultCode,
+};
 use sdkwork_web_core::{problem_response, WebFrameworkError, WebRequestContext};
 use serde::Serialize;
 
@@ -71,6 +73,12 @@ pub fn finish_no_content(ctx: &WebRequestContext, result: ApiResult<()>) -> Resp
 pub struct ApiProblem {
     message: String,
     status: StatusCode,
+    /// Platform result code rendered as the problem `code`.
+    ///
+    /// Most failures let the framework derive the code from the status; a
+    /// pagination violation must carry `40003 INVALID_PARAMETER`
+    /// (`PAGINATION_SPEC` §3), so it names the code explicitly.
+    result_code: Option<SdkWorkResultCode>,
 }
 
 impl ApiProblem {
@@ -78,6 +86,17 @@ impl ApiProblem {
         Self {
             message: message.into(),
             status: StatusCode::BAD_REQUEST,
+            result_code: None,
+        }
+    }
+
+    /// A rejected list parameter (`page`/`page_size` outside the declared
+    /// range), rendered as `40003 INVALID_PARAMETER`.
+    pub fn invalid_parameter(message: impl Into<String>) -> Self {
+        Self {
+            message: message.into(),
+            status: StatusCode::BAD_REQUEST,
+            result_code: Some(SdkWorkResultCode::InvalidParameter),
         }
     }
 
@@ -85,6 +104,7 @@ impl ApiProblem {
         Self {
             message: message.into(),
             status: StatusCode::NOT_FOUND,
+            result_code: None,
         }
     }
 
@@ -92,6 +112,7 @@ impl ApiProblem {
         Self {
             message: message.into(),
             status: StatusCode::FORBIDDEN,
+            result_code: None,
         }
     }
 
@@ -99,6 +120,7 @@ impl ApiProblem {
         Self {
             message: message.into(),
             status: StatusCode::CONFLICT,
+            result_code: None,
         }
     }
 
@@ -106,6 +128,7 @@ impl ApiProblem {
         Self {
             message: message.into(),
             status: StatusCode::INTERNAL_SERVER_ERROR,
+            result_code: None,
         }
     }
 
@@ -123,6 +146,31 @@ impl ApiProblem {
     }
 
     pub fn into_response_for(self, ctx: &WebRequestContext) -> Response {
+        if let Some(result_code) = self.result_code {
+            let correlation = ctx.problem_correlation();
+            let mut problem = SdkWorkProblemDetail::platform_enriched(
+                result_code,
+                self.message.clone(),
+                correlation.resolved_trace_id().unwrap_or_default(),
+                correlation.routing(),
+            );
+            problem.status = self.status.as_u16();
+            if !self.message.trim().is_empty() {
+                problem.detail = Some(self.message.clone());
+            }
+            let body = Json(serde_json::to_value(&problem).unwrap_or(serde_json::Value::Null));
+            let mut response = (
+                self.status,
+                [(axum::http::header::CONTENT_TYPE, "application/problem+json")],
+                body,
+            )
+                .into_response();
+            attach_trace_header(
+                &mut response,
+                &correlation.resolved_trace_id().unwrap_or_default(),
+            );
+            return response;
+        }
         problem_response(&self.framework_error(), ctx.problem_correlation())
     }
 }
@@ -181,6 +229,35 @@ mod tests {
             serde_json::from_slice(&body).expect("create response JSON");
         assert_eq!(Some(0), payload["code"].as_i64());
         assert_eq!("101", payload["data"]["item"]["id"].as_str().unwrap());
+        assert_eq!("skills-trace-id", payload["traceId"].as_str().unwrap());
+    }
+
+    /// `PAGINATION_SPEC` §3: a rejected list window must carry the platform
+    /// `40003 INVALID_PARAMETER` code, not the generic validation code.
+    #[tokio::test]
+    async fn invalid_parameter_renders_the_40003_problem() {
+        let context = test_context("GET");
+        let response = ApiProblem::invalid_parameter(
+            "page must be between 1 and 10000, page_size must be between 1 and 200",
+        )
+        .into_response_for(&context);
+
+        assert_eq!(StatusCode::BAD_REQUEST, response.status());
+        assert_eq!(
+            Some("skills-trace-id"),
+            response
+                .headers()
+                .get("x-sdkwork-trace-id")
+                .and_then(|value| value.to_str().ok())
+        );
+        let body = to_bytes(response.into_body(), usize::MAX)
+            .await
+            .expect("problem body");
+        let payload: serde_json::Value =
+            serde_json::from_slice(&body).expect("problem response JSON");
+        assert_eq!(Some(40003), payload["code"].as_i64());
+        assert_eq!(Some(400), payload["status"].as_u64());
+        assert_eq!("errors.result.40003", payload["i18nKey"].as_str().unwrap());
         assert_eq!("skills-trace-id", payload["traceId"].as_str().unwrap());
     }
 
