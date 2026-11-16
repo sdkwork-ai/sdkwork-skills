@@ -11,10 +11,10 @@ use async_trait::async_trait;
 use sdkwork_database_id::SnowflakeIdGenerator;
 use sdkwork_intelligence_skills_service::{SkillsRepository, SkillsResult};
 use sdkwork_skills_contract::{
-    SkillArtifactRecord, SkillCapabilityRecord, SkillCatalogFilter, SkillCategoryRecord,
-    SkillInstallationRecord, SkillPackageRecord, SkillRecord,
+    SkillArtifactRecord, SkillCapabilityRecord, SkillCategoryRecord, SkillInstallationRecord,
+    SkillPackageRecord, SkillRecord,
 };
-use sdkwork_utils_rust::OffsetListPageParams;
+use sdkwork_utils_rust::{CatalogViewFilter, OffsetListPageParams};
 use sqlx::PgPool;
 
 #[derive(Clone)]
@@ -36,7 +36,7 @@ impl SkillsRepository for SqlxSkillsRepository {
         tenant_id: u64,
         params: OffsetListPageParams,
         keyword: Option<&str>,
-        filter: &SkillCatalogFilter,
+        filter: &CatalogViewFilter,
     ) -> SkillsResult<(Vec<SkillPackageRecord>, i64)> {
         postgres::list_skill_packages_page(&self.pool, tenant_id, params, keyword, filter).await
     }
@@ -73,7 +73,7 @@ impl SkillsRepository for SqlxSkillsRepository {
         user_id: u64,
         params: OffsetListPageParams,
         keyword: Option<&str>,
-        filter: &SkillCatalogFilter,
+        filter: &CatalogViewFilter,
     ) -> SkillsResult<(Vec<SkillPackageRecord>, i64)> {
         postgres::list_marketplace_skill_packages_page(
             &self.pool,
@@ -131,7 +131,7 @@ impl SkillsRepository for SqlxSkillsRepository {
         user_id: u64,
         params: OffsetListPageParams,
         keyword: Option<&str>,
-        filter: &SkillCatalogFilter,
+        filter: &CatalogViewFilter,
     ) -> SkillsResult<(Vec<SkillRecord>, i64)> {
         postgres::list_skills_page(
             &self.pool,

@@ -1,8 +1,7 @@
-use sdkwork_skills_contract::{
-    normalize_category_filter, normalize_role_code_filter, SkillCatalogFilter, SkillCategoryType,
-    SkillInstallationSubjectKind,
+use sdkwork_skills_contract::{SkillCategoryType, SkillInstallationSubjectKind};
+use sdkwork_utils_rust::{
+    validated_offset_list_params, CatalogViewFilter, CatalogViewQuery, OffsetListPageParams,
 };
-use sdkwork_utils_rust::{validated_offset_list_params, OffsetListPageParams};
 use serde::Deserialize;
 
 use crate::response::ApiProblem;
@@ -11,17 +10,22 @@ use crate::response::ApiProblem;
 /// view filters (`category_code`, `role_codes`) the catalog lists consume.
 #[derive(Debug, Default, Deserialize)]
 pub struct SdkWorkListQuery {
+    #[serde(
+        default,
+        deserialize_with = "sdkwork_utils_rust::serde_query_int::option_i32"
+    )]
     pub page: Option<i32>,
+    #[serde(
+        default,
+        deserialize_with = "sdkwork_utils_rust::serde_query_int::option_i32"
+    )]
     pub page_size: Option<i32>,
     pub cursor: Option<String>,
     pub q: Option<String>,
-    /// One category code from the registry; `all` keeps every category.
-    #[serde(alias = "categoryCode")]
-    pub category_code: Option<String>,
-    /// Comma-separated IAM role codes of the signed-in operator. Empty keeps
-    /// the "all data" view.
-    #[serde(alias = "roleCodes")]
-    pub role_codes: Option<String>,
+    /// Shared catalog view vocabulary: one registry category code (`all` keeps
+    /// every category) and the comma-separated IAM role codes of the caller.
+    #[serde(flatten)]
+    pub catalog: CatalogViewQuery,
 }
 
 #[derive(Debug, Default, Deserialize)]
@@ -77,33 +81,29 @@ impl SdkWorkListQuery {
             .filter(|value| !value.is_empty())
     }
 
-    /// Normalized category selector: `None` keeps every category.
-    pub fn category_filter(&self) -> Option<String> {
-        normalize_category_filter(self.category_code.as_deref())
-    }
-
-    /// Normalized role scope: empty keeps the "all data" view.
-    pub fn role_scope(&self) -> Vec<String> {
-        normalize_role_code_filter(self.role_codes.as_deref())
-    }
-
     /// Catalog view handed to the repository for the two optional filters.
-    pub fn catalog_filter(&self) -> SkillCatalogFilter {
-        SkillCatalogFilter {
-            category_code: self.category_filter(),
-            role_codes: self.role_scope(),
-        }
+    ///
+    /// The shared query type owns the wire vocabulary and the normalization, so
+    /// both the category selector and the role scope arrive canonical
+    /// lowercase; the repository binds them straight into its predicates.
+    pub fn catalog_filter(&self) -> CatalogViewFilter {
+        self.catalog.to_filter()
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use axum::extract::Query;
+    use axum::http::Uri;
+
     use super::*;
 
     fn query_with(category_code: Option<&str>, role_codes: Option<&str>) -> SdkWorkListQuery {
         SdkWorkListQuery {
-            category_code: category_code.map(str::to_string),
-            role_codes: role_codes.map(str::to_string),
+            catalog: CatalogViewQuery {
+                category_code: category_code.map(str::to_string),
+                role_codes: role_codes.map(str::to_string),
+            },
             ..Default::default()
         }
     }
@@ -118,29 +118,47 @@ mod tests {
     }
 
     #[test]
-    fn category_filter_keeps_all_for_the_all_selector() {
-        assert_eq!(query_with(Some("all"), None).category_filter(), None);
+    fn category_filter_is_canonical_lowercase_and_keeps_all_for_the_all_selector() {
         assert_eq!(
-            query_with(Some("coding"), None).category_filter(),
-            Some("coding".to_string())
+            query_with(Some("all"), None)
+                .catalog_filter()
+                .category_code(),
+            None
+        );
+        assert_eq!(
+            query_with(Some("CODING"), None)
+                .catalog_filter()
+                .category_code(),
+            Some("coding")
+        );
+        assert_eq!(
+            query_with(Some(" Coding "), None)
+                .catalog_filter()
+                .category_code(),
+            Some("coding")
         );
     }
 
     #[test]
-    fn role_scope_is_empty_for_the_all_view() {
-        assert!(query_with(None, None).role_scope().is_empty());
+    fn role_scope_normalizes_role_codes_to_canonical_lowercase() {
+        assert!(query_with(None, None)
+            .catalog_filter()
+            .role_codes()
+            .is_empty());
         assert_eq!(
-            query_with(None, Some("org_admin,org_operations")).role_scope(),
-            vec!["org_admin".to_string(), "org_operations".to_string()]
+            query_with(None, Some("Org_Admin,ORG_OPERATIONS,org_admin"))
+                .catalog_filter()
+                .role_codes(),
+            ["org_admin".to_string(), "org_operations".to_string()].as_slice()
         );
     }
 
     #[test]
     fn catalog_filter_carries_both_normalized_filters() {
-        let filter = query_with(Some("ALL"), Some("org_admin")).catalog_filter();
+        let filter = query_with(Some("ALL"), Some("Org_Admin")).catalog_filter();
         assert!(!filter.is_all_data());
-        assert_eq!(filter.category_code, None);
-        assert_eq!(filter.role_codes, vec!["org_admin".to_string()]);
+        assert_eq!(filter.category_code(), None);
+        assert_eq!(filter.role_codes(), ["org_admin".to_string()].as_slice());
 
         let all_data = query_with(Some("all"), None).catalog_filter();
         assert!(all_data.is_all_data());
@@ -153,14 +171,72 @@ mod tests {
             "roleCodes": "org_admin",
         }))
         .expect("deserialize catalog query aliases");
-        assert_eq!(query.category_filter(), Some("coding".to_string()));
-        assert_eq!(query.role_scope(), vec!["org_admin".to_string()]);
+        let filter = query.catalog_filter();
+        assert_eq!(filter.category_code(), Some("coding"));
+        assert_eq!(filter.role_codes(), ["org_admin".to_string()].as_slice());
+    }
+
+    #[test]
+    fn query_parameters_parse_from_the_url_wire_form() {
+        let uri: Uri = "/skills?page=2&category_code=CODING&role_codes=Org_Admin%2CORG_AUDITOR"
+            .parse()
+            .expect("url parses");
+        let Query(query) =
+            Query::<SdkWorkListQuery>::try_from_uri(&uri).expect("extract the list query");
+        assert_eq!(query.effective_page(), 2);
+        let filter = query.catalog_filter();
+        assert_eq!(filter.category_code(), Some("coding"));
+        assert_eq!(
+            filter.role_codes(),
+            ["org_admin".to_string(), "org_auditor".to_string()].as_slice()
+        );
     }
 
     #[test]
     fn category_list_query_keeps_the_optional_category_type() {
-        let query = SkillCategoryListQuery::default();
-        assert!(query.category_type.is_none());
-        assert!(query.pagination.category_filter().is_none());
+        let uri: Uri = "/categories?category_type=skill_market&category_code=ALL"
+            .parse()
+            .expect("url parses");
+        let Query(query) =
+            Query::<SkillCategoryListQuery>::try_from_uri(&uri).expect("extract the list query");
+        assert_eq!(query.category_type, Some(SkillCategoryType::SkillMarket));
+        assert!(query.pagination.catalog_filter().is_all_data());
+
+        let default_query = SkillCategoryListQuery::default();
+        assert!(default_query.category_type.is_none());
+        assert!(default_query.pagination.catalog_filter().is_all_data());
+    }
+
+    #[test]
+    fn wrapper_queries_parse_paging_next_to_their_own_fields() {
+        // Both wrapper DTOs flatten the base list query, so numeric paging
+        // reaches the inner DTO through serde's content buffer.
+        let uri: Uri = "/categories?page=3&page_size=25&category_type=skill_market"
+            .parse()
+            .expect("url parses");
+        let Query(category_query) = Query::<SkillCategoryListQuery>::try_from_uri(&uri)
+            .expect("extract the category query");
+        assert_eq!(category_query.pagination.page, Some(3));
+        assert_eq!(category_query.pagination.page_size, Some(25));
+        let offset = category_query
+            .pagination
+            .offset_params()
+            .expect("offset params");
+        assert_eq!((offset.page, offset.page_size), (3, 25));
+
+        let uri: Uri = "/installations?page=2&page_size=50&subject_kind=user&subject_id=42"
+            .parse()
+            .expect("url parses");
+        let Query(installation_query) = Query::<SkillInstallationListQuery>::try_from_uri(&uri)
+            .expect("extract the installation query");
+        assert_eq!(installation_query.pagination.page, Some(2));
+        assert_eq!(installation_query.pagination.page_size, Some(50));
+        assert_eq!(installation_query.subject_id, Some(42));
+    }
+
+    #[test]
+    fn wrapper_queries_still_reject_junk_paging() {
+        let uri: Uri = "/categories?page=next".parse().expect("url parses");
+        assert!(Query::<SkillCategoryListQuery>::try_from_uri(&uri).is_err());
     }
 }

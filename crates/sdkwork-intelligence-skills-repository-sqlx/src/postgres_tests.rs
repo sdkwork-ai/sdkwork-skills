@@ -4,11 +4,11 @@ use sdkwork_database_id::SnowflakeIdGenerator;
 use sdkwork_intelligence_skills_service::{SkillsService, SkillsServiceError};
 use sdkwork_skills_contract::{
     SkillArtifactRecord, SkillArtifactSource, SkillArtifactStatus, SkillCapabilityRecord,
-    SkillCapabilityRiskLevel, SkillCatalogFilter, SkillCategoryRecord, SkillInstallationRecord,
+    SkillCapabilityRiskLevel, SkillCategoryRecord, SkillInstallationRecord,
     SkillInstallationSubjectKind, SkillInvocationKind, SkillLifecycleStatus, SkillPackageRecord,
     SkillVisibility,
 };
-use sdkwork_utils_rust::OffsetListPageParams;
+use sdkwork_utils_rust::{CatalogViewFilter, OffsetListPageParams};
 use sqlx::postgres::PgPoolOptions;
 use sqlx::PgPool;
 
@@ -265,7 +265,7 @@ async fn verify_marketplace_and_subject_installations(
     assert_eq!(first.categories, vec!["coding"]);
 
     let (packages, package_total) = service
-        .list_skill_packages_page(tenant_id, page(1, 1), None, &SkillCatalogFilter::default())
+        .list_skill_packages_page(tenant_id, page(1, 1), None, &CatalogViewFilter::all_data())
         .await
         .expect("list package page");
     assert_eq!(packages.len(), 1);
@@ -278,7 +278,7 @@ async fn verify_marketplace_and_subject_installations(
             23,
             page(1, 10),
             Some("skill"),
-            &SkillCatalogFilter::default(),
+            &CatalogViewFilter::all_data(),
         )
         .await
         .expect("list marketplace skills");
@@ -715,14 +715,14 @@ async fn verify_catalog_view_filters(service: &SkillsService<SqlxSkillsRepositor
         .await
         .expect("create role restricted package");
 
-    let all_data = SkillCatalogFilter::default();
+    let all_data = CatalogViewFilter::all_data();
     let (_, all_total) = service
         .list_skill_packages_page(tenant_id, page(1, 10), None, &all_data)
         .await
         .expect("list every package");
     assert_eq!(all_total, 3);
 
-    let coding_only = SkillCatalogFilter::from_query(Some("coding"), None);
+    let coding_only = CatalogViewFilter::from_query(Some("coding"), None);
     let (coding_packages, coding_total) = service
         .list_skill_packages_page(tenant_id, page(1, 10), None, &coding_only)
         .await
@@ -737,13 +737,13 @@ async fn verify_catalog_view_filters(service: &SkillsService<SqlxSkillsRepositor
             tenant_id,
             page(1, 10),
             None,
-            &SkillCatalogFilter::from_query(Some("CODING"), None),
+            &CatalogViewFilter::from_query(Some("CODING"), None),
         )
         .await
         .expect("list coding packages with a case-insensitive selector");
     assert_eq!(coding_upper_total, 2);
 
-    let operations_scope = SkillCatalogFilter::from_query(None, Some("org_operations"));
+    let operations_scope = CatalogViewFilter::from_query(None, Some("org_operations"));
     let (operations_packages, operations_total) = service
         .list_skill_packages_page(tenant_id, page(1, 10), None, &operations_scope)
         .await
@@ -758,13 +758,13 @@ async fn verify_catalog_view_filters(service: &SkillsService<SqlxSkillsRepositor
             tenant_id,
             page(1, 10),
             None,
-            &SkillCatalogFilter::from_query(None, Some("ORG_FINANCE")),
+            &CatalogViewFilter::from_query(None, Some("ORG_FINANCE")),
         )
         .await
         .expect("list packages inside the finance role scope");
     assert_eq!(finance_total, 3);
 
-    let combined = SkillCatalogFilter::from_query(Some("coding"), Some("org_operations"));
+    let combined = CatalogViewFilter::from_query(Some("coding"), Some("org_operations"));
     let (combined_packages, combined_total) = service
         .list_skill_packages_page(tenant_id, page(1, 10), None, &combined)
         .await
@@ -795,7 +795,7 @@ async fn verify_catalog_view_filters(service: &SkillsService<SqlxSkillsRepositor
             user_id,
             page(1, 10),
             None,
-            &SkillCatalogFilter::from_query(Some("writing"), None),
+            &CatalogViewFilter::from_query(Some("writing"), None),
         )
         .await
         .expect("list writing skills");

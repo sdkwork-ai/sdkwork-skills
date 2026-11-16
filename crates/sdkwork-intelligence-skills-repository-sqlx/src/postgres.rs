@@ -1,10 +1,10 @@
 use sdkwork_database_id::SnowflakeIdGenerator;
 use sdkwork_intelligence_skills_service::{SkillsResult, SkillsServiceError};
 use sdkwork_skills_contract::{
-    SkillArtifactRecord, SkillCapabilityRecord, SkillCatalogFilter, SkillCategoryRecord,
-    SkillInstallationRecord, SkillLifecycleStatus, SkillPackageRecord, SkillRecord,
+    SkillArtifactRecord, SkillCapabilityRecord, SkillCategoryRecord, SkillInstallationRecord,
+    SkillLifecycleStatus, SkillPackageRecord, SkillRecord,
 };
-use sdkwork_utils_rust::{OffsetListPageParams, LIST_TOTAL_SQL_COLUMN};
+use sdkwork_utils_rust::{CatalogViewFilter, OffsetListPageParams, LIST_TOTAL_SQL_COLUMN};
 use sqlx::{PgPool, Postgres, Row, Transaction};
 
 use crate::json_util::{
@@ -301,13 +301,14 @@ const INSTALLATION_SELECT: &str = r#"
 "#;
 
 /// Category half of the catalog view, mirroring
-/// `SkillCatalogFilter::allows_category`.
+/// `CatalogViewFilter::allows_any_category`.
 ///
 /// A record is in view when one of its `skills_category_binding` rows joins a
 /// live `skills_category` whose `code` equals the filter. `category_param` is
 /// the positional placeholder holding the optional selector: `NULL` keeps every
 /// category, so the predicate only ever narrows the caller's tenant and
-/// visibility scope.
+/// visibility scope. The bound value is already canonical lowercase, so only
+/// the stored code is folded for the comparison.
 fn catalog_category_predicate(category_param: &str) -> String {
     format!(
         "({category_param}::text IS NULL
@@ -318,17 +319,17 @@ fn catalog_category_predicate(category_param: &str) -> String {
                 ON filter_category.id = filter_binding.category_id
                AND filter_category.deleted_at IS NULL
               WHERE filter_binding.skill_id = s.id
-                AND lower(filter_category.code) = lower({category_param}::text)
+                AND lower(filter_category.code) = {category_param}::text
           ))"
     )
 }
 
-/// Role half of the catalog view, mirroring `role_scope_allows`.
+/// Role half of the catalog view, mirroring `CatalogViewFilter::allows_roles`.
 ///
 /// An empty scope keeps the all-data view, an empty assignment is open to every
 /// role, and a populated scope matches the records naming one of its codes.
 /// `role_param` is the positional placeholder holding the text array of
-/// lower-cased caller role codes.
+/// normalized (canonical lowercase) caller role codes.
 fn catalog_role_scope_predicate(role_param: &str) -> String {
     format!(
         "(cardinality({role_param}::text[]) = 0
@@ -346,7 +347,7 @@ pub async fn list_skill_packages_page(
     tenant_id: u64,
     params: OffsetListPageParams,
     keyword: Option<&str>,
-    filter: &SkillCatalogFilter,
+    filter: &CatalogViewFilter,
 ) -> SkillsResult<(Vec<SkillPackageRecord>, i64)> {
     let category_predicate = catalog_category_predicate("$5");
     let role_predicate = catalog_role_scope_predicate("$6");
@@ -365,8 +366,8 @@ pub async fn list_skill_packages_page(
         .bind(search_pattern(keyword))
         .bind(params.page_size)
         .bind(params.offset)
-        .bind(filter.category_code.as_deref())
-        .bind(filter.normalized_role_codes())
+        .bind(filter.category_code())
+        .bind(filter.role_codes().to_vec())
         .fetch_all(pool)
         .await
         .map_err(map_sqlx)?;
@@ -428,7 +429,7 @@ pub async fn list_marketplace_skill_packages_page(
     user_id: u64,
     params: OffsetListPageParams,
     keyword: Option<&str>,
-    filter: &SkillCatalogFilter,
+    filter: &CatalogViewFilter,
 ) -> SkillsResult<(Vec<SkillPackageRecord>, i64)> {
     let category_predicate = catalog_category_predicate("$7");
     let role_predicate = catalog_role_scope_predicate("$8");
@@ -452,8 +453,8 @@ pub async fn list_marketplace_skill_packages_page(
         .bind(search_pattern(keyword))
         .bind(params.page_size)
         .bind(params.offset)
-        .bind(filter.category_code.as_deref())
-        .bind(filter.normalized_role_codes())
+        .bind(filter.category_code())
+        .bind(filter.role_codes().to_vec())
         .fetch_all(pool)
         .await
         .map_err(map_sqlx)?;
@@ -496,7 +497,7 @@ pub async fn list_skills_page(
     user_id: u64,
     params: OffsetListPageParams,
     keyword: Option<&str>,
-    filter: &SkillCatalogFilter,
+    filter: &CatalogViewFilter,
 ) -> SkillsResult<(Vec<SkillRecord>, i64)> {
     let category_predicate = catalog_category_predicate("$7");
     let role_predicate = catalog_role_scope_predicate("$8");
@@ -521,8 +522,8 @@ pub async fn list_skills_page(
         .bind(search_pattern(keyword))
         .bind(params.page_size)
         .bind(params.offset)
-        .bind(filter.category_code.as_deref())
-        .bind(filter.normalized_role_codes())
+        .bind(filter.category_code())
+        .bind(filter.role_codes().to_vec())
         .fetch_all(pool)
         .await
         .map_err(map_sqlx)?;

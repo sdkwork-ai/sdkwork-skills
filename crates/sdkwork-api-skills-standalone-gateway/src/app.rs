@@ -118,6 +118,7 @@ mod tests {
                 "paths": {}
             }),
             permission_catalog: Vec::new(),
+            public_documents: Vec::new(),
             readiness_check,
             domain_context_injectors: vec![Arc::new(NoopDomainContextInjector)],
         }

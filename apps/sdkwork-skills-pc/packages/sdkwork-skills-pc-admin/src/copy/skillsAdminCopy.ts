@@ -95,6 +95,16 @@ const en = {
       'Curate the Skill package catalog — create packages, bind categories, and manage role visibility.',
     createPackage: 'Create package',
     empty: 'No skill packages yet.',
+    filters: {
+      keywordLabel: 'Search packages',
+      keywordPlaceholder: 'name, skill key, category',
+      categoryLabel: 'Category',
+      allCategories: 'All categories',
+      roleScopeLabel: 'Data scope',
+      roleScopeAll: 'All data',
+      roleScopeMine: 'My roles',
+      roleScopeUnavailable: 'The host did not supply the operator role codes.',
+    },
     defaults: {
       displayName: 'Demo Sample Skill',
       summary: 'Skill package uploaded through sdkwork-drive',
@@ -390,6 +400,16 @@ const zh: SkillsAdminCopy = {
     description: '维护技能包目录：创建技能包、绑定分类，并管理角色的可见范围。',
     createPackage: '创建技能包',
     empty: '暂无技能包。',
+    filters: {
+      keywordLabel: '搜索技能包',
+      keywordPlaceholder: '名称、技能标识、分类',
+      categoryLabel: '分类',
+      allCategories: '全部分类',
+      roleScopeLabel: '数据范围',
+      roleScopeAll: '全部数据',
+      roleScopeMine: '我的角色',
+      roleScopeUnavailable: '宿主未提供当前操作者的角色编码。',
+    },
     defaults: {
       displayName: '示例技能',
       summary: '通过 sdkwork-drive 上传的技能包',

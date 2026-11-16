@@ -18,10 +18,23 @@ import type {
 
 import type { SkillsBackendClients } from '../clients';
 
+/**
+ * List query parameters of the managed package catalog.
+ *
+ * The backend list accepts the shared catalog view filters
+ * (`category_code`, `role_codes`) plus `q`/`page`/`page_size`; the admin page
+ * passes them through rather than filtering a fully loaded page in memory, so
+ * the page and its totals agree.
+ */
+export type ManagedSkillPackagesListParams = Parameters<
+  SkillsBackendClients['backend']['skills']['skillPackages']['list']
+>[0];
+
 export async function listManagedSkillPackages(
   clients: SkillsBackendClients,
+  params?: ManagedSkillPackagesListParams,
 ): Promise<SkillPackagesPageData> {
-  return clients.backend.skills.skillPackages.list();
+  return clients.backend.skills.skillPackages.list(params);
 }
 
 export async function listManagedSkillCategories(

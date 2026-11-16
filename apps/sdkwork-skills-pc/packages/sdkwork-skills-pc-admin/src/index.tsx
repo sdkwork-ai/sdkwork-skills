@@ -1,4 +1,4 @@
-import { useEffect, useId, useState, type FormEvent, type ReactNode } from 'react';
+import { useEffect, useId, useMemo, useState, type FormEvent, type ReactNode } from 'react';
 import {
   useSkillsClients,
   type CreatePackageInput,
@@ -15,6 +15,7 @@ import {
   normalizeAllowedRoleCodes,
   updateSkillPackage,
 } from '@sdkwork/skills-pc-admin-core';
+import type { ManagedSkillPackagesListParams } from '@sdkwork/skills-pc-admin-core';
 
 import { ConfirmModal, SurfaceDrawer } from './components/SurfaceOverlay.tsx';
 import { ArtifactSourceField } from './components/ArtifactSourceField.tsx';
@@ -94,6 +95,29 @@ export function AdminSkillsPage({
   const [editTarget, setEditTarget] = useState<SkillPackageRecord | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<SkillPackageRecord | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [keyword, setKeyword] = useState('');
+  const [categoryCode, setCategoryCode] = useState('');
+  const [roleScope, setRoleScope] = useState<'all' | 'mine'>('all');
+  // The category chips, the keyword, and the role scope all travel to the list
+  // endpoint: the backend filters and paginates, so the totals stay honest and
+  // a role-scoped view is one request rather than a client-side judgement.
+  const usableRoleCodes = useMemo(
+    () => roleCodes.map((code) => code.trim()).filter((code) => code.length > 0),
+    [roleCodes],
+  );
+  const listParams = useMemo<ManagedSkillPackagesListParams | undefined>(() => {
+    const params: NonNullable<ManagedSkillPackagesListParams> = {};
+    if (keyword.trim().length > 0) {
+      params.q = keyword.trim();
+    }
+    if (categoryCode.length > 0) {
+      params.categoryCode = categoryCode;
+    }
+    if (roleScope === 'mine' && usableRoleCodes.length > 0) {
+      params.roleCodes = [...usableRoleCodes].sort().join(',');
+    }
+    return Object.keys(params).length > 0 ? params : undefined;
+  }, [keyword, categoryCode, roleScope, usableRoleCodes]);
   const [form, setForm] = useState<CreatePackageForm>({
     skillKey: 'skill.demo.sample',
     packageKey: 'demo-sample',
@@ -121,7 +145,7 @@ export function AdminSkillsPage({
 
   async function reload() {
     const [packagePage, categoryPage] = await Promise.all([
-      listManagedSkillPackages(clients),
+      listManagedSkillPackages(clients, listParams),
       listManagedSkillCategories(clients),
     ]);
     setPackages(packagePage.items);
@@ -130,7 +154,7 @@ export function AdminSkillsPage({
 
   useEffect(() => {
     reload().catch((cause: Error) => setError(cause.message));
-  }, [clients]);
+  }, [clients, listParams]);
 
   useEffect(() => {
     if (!initialEditPackageId || packages.length === 0) return;
@@ -257,6 +281,72 @@ export function AdminSkillsPage({
           {error}
         </div>
       ) : null}
+
+      {/* Catalog filters: keyword, category, and the operator's role scope.
+          Every page in the AI-foundation console renders the same three
+          controls, and they all narrow the list endpoint rather than a loaded
+          page, so the four catalogs read consistently. */}
+      <div className="flex flex-wrap items-end gap-4">
+        <label className="grid max-w-xs gap-1 text-sm">
+          <span className={LABEL_TEXT_CLASS}>{copy.admin.filters.keywordLabel}</span>
+          <input
+            className={INPUT_CLASS}
+            value={keyword}
+            onChange={(event) => setKeyword(event.target.value)}
+            placeholder={copy.admin.filters.keywordPlaceholder}
+          />
+        </label>
+        <label className="grid gap-1 text-sm">
+          <span className={LABEL_TEXT_CLASS}>{copy.admin.filters.categoryLabel}</span>
+          <select
+            className="rounded-md border border-zinc-700 bg-zinc-800/60 px-3 py-2 text-sm text-zinc-100"
+            value={categoryCode}
+            onChange={(event) => setCategoryCode(event.target.value)}
+          >
+            <option value="">{copy.admin.filters.allCategories}</option>
+            {categories
+              .filter((category) => category.visible && category.status === 1)
+              .slice()
+              .sort((left, right) => left.sortWeight - right.sortWeight)
+              .map((category) => (
+                <option key={category.id} value={category.code}>
+                  {category.name}
+                </option>
+              ))}
+          </select>
+        </label>
+        <div className="grid gap-1 text-sm">
+          <span className={LABEL_TEXT_CLASS}>{copy.admin.filters.roleScopeLabel}</span>
+          <div
+            className="inline-flex overflow-hidden rounded-md border border-zinc-700"
+            role="group"
+            aria-label={copy.admin.filters.roleScopeLabel}
+          >
+            {(['all', 'mine'] as const).map((scope) => {
+              const disabled = scope === 'mine' && usableRoleCodes.length === 0;
+              return (
+                <button
+                  key={scope}
+                  type="button"
+                  className={
+                    roleScope === scope
+                      ? 'bg-blue-600 px-3 py-2 text-xs font-medium text-white'
+                      : 'px-3 py-2 text-xs text-zinc-300 hover:bg-zinc-800 disabled:opacity-50'
+                  }
+                  aria-pressed={roleScope === scope}
+                  disabled={disabled}
+                  title={disabled ? copy.admin.filters.roleScopeUnavailable : undefined}
+                  onClick={() => setRoleScope(scope)}
+                >
+                  {scope === 'all'
+                    ? copy.admin.filters.roleScopeAll
+                    : copy.admin.filters.roleScopeMine}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </div>
 
       <div className="overflow-hidden rounded-lg border border-zinc-800 bg-zinc-900/60">
         {packages.length === 0 ? (
