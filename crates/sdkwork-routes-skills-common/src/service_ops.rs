@@ -141,6 +141,32 @@ pub async fn get_marketplace_skill_package<R: SkillsRepository>(
     ))
 }
 
+/// Assert that the parent skill package is catalog-visible to the caller before
+/// serving or mutating a package-scoped sub-resource.
+///
+/// The marketplace read is the single visibility authority (package status and
+/// the visibility matrix), so sub-resources reuse it instead of restating that
+/// SQL against their own tables. A package that is missing, soft-deleted,
+/// not published, in another tenant, or hidden by the visibility matrix all
+/// collapse to the same `404` the package retrieve operation returns; the
+/// caller cannot distinguish "invisible" from "absent".
+pub async fn ensure_app_package_visible<R: SkillsRepository>(
+    service: &SkillsService<R>,
+    tenant_id: u64,
+    organization_id: u64,
+    user_id: u64,
+    package_id: u64,
+) -> ApiResult<()> {
+    service
+        .get_marketplace_skill_package(tenant_id, organization_id, user_id, package_id)
+        .await
+        .map(|_package| ())
+        .map_err(|error| match error {
+            SkillsServiceError::NotFound(message) => ApiProblem::not_found(message),
+            other => ApiProblem::from(other),
+        })
+}
+
 pub async fn create_skill_package<R: SkillsRepository>(
     service: &SkillsService<R>,
     package: SkillPackageRecord,

@@ -2276,9 +2276,11 @@ dependencies = [
  "sdkwork-intelligence-skills-service",
  "sdkwork-routes-skills-common",
  "sdkwork-skills-contract",
+ "sdkwork-utils-rust",
  "sdkwork-web-core",
  "serde",
  "serde_json",
+ "tokio",
 ]
 
 [[package]]

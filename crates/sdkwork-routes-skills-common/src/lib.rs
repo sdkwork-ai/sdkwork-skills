@@ -17,9 +17,10 @@ pub use response::{
 };
 pub use service_ops::{
     create_artifact, create_capability, create_category, create_skill_package,
-    delete_skill_package, get_capability, get_category, get_marketplace_skill_package, get_skill,
-    get_skill_package, install_skill, list_artifacts, list_capabilities, list_categories,
-    list_hub_skills, list_installable_artifacts, list_installations,
-    list_marketplace_skill_packages, list_owned_skill_packages, list_skill_packages,
-    parse_resource_id, update_capability, update_category, update_skill_package,
+    delete_skill_package, ensure_app_package_visible, get_capability, get_category,
+    get_marketplace_skill_package, get_skill, get_skill_package, install_skill, list_artifacts,
+    list_capabilities, list_categories, list_hub_skills, list_installable_artifacts,
+    list_installations, list_marketplace_skill_packages, list_owned_skill_packages,
+    list_skill_packages, parse_resource_id, update_capability, update_category,
+    update_skill_package,
 };
