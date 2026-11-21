@@ -66,15 +66,27 @@ export function SkillCapabilitiesPage() {
   }
 
   return (
-    <section className="skills-console-page">
+    <section className="embedded-fill-page">
       <header className="skills-console-header" style={{ marginBottom: 0 }}>
         <h2>{copy.capabilities.title}</h2>
-        <button type="button" className="skills-console-primary" onClick={() => setCreateOpen(true)}>
-          {copy.capabilities.create}
-        </button>
       </header>
-      {error ? <p role="alert">{error}</p> : null}
+      {error ? (
+        <div role="alert" className="admin-alert admin-alert--error">
+          {error}
+        </div>
+      ) : null}
       <div className="data-surface">
+        <div className="admin-list-toolbar">
+          <div className="admin-list-toolbar__actions">
+            <button
+              type="button"
+              className="admin-button admin-button--primary"
+              onClick={() => setCreateOpen(true)}
+            >
+              {copy.capabilities.create}
+            </button>
+          </div>
+        </div>
         <div className="table-frame">
           {capabilities.length === 0 ? (
             <div className="empty-state">
@@ -84,7 +96,7 @@ export function SkillCapabilitiesPage() {
               </button>
             </div>
           ) : (
-            <table>
+            <table className="admin-list-table">
               <thead>
                 <tr>
                   <th>{copy.capabilities.table.name}</th>

@@ -53,8 +53,7 @@ const SECONDARY_BUTTON_CLASS =
   'rounded-md border border-zinc-700 bg-zinc-800/60 px-3 py-1.5 text-sm text-zinc-200 hover:bg-zinc-700/60 disabled:opacity-60';
 const PRIMARY_BUTTON_CLASS =
   'rounded-md bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-500 disabled:opacity-60';
-const ALERT_CLASS =
-  'rounded-md border border-red-800 bg-red-950/50 px-3 py-2 text-sm text-red-400';
+const ALERT_CLASS = 'admin-alert admin-alert--error';
 
 type CreatePackageForm = Omit<CreatePackageInput, 'initialArtifact'> & {
   initialArtifact: Omit<CreatePackageInput['initialArtifact'], 'source'> & {
@@ -288,19 +287,21 @@ export function AdminSkillsPage({
   }
 
   return (
-    <section className="flex flex-col gap-4 p-6">
-      <header className="flex flex-wrap items-center justify-between gap-3">
+    <section className="embedded-fill-page">
+      <header className="admin-page-header">
         <div>
-          <h2 className="text-lg font-semibold text-zinc-100">{copy.admin.title}</h2>
-          <p className="mt-0.5 text-sm text-zinc-400">{copy.admin.description}</p>
+          <h2 className="admin-page-header__title">{copy.admin.title}</h2>
+          <p className="admin-page-header__description">{copy.admin.description}</p>
         </div>
-        <button
-          type="button"
-          className={PRIMARY_BUTTON_CLASS}
-          onClick={openCreate}
-        >
-          {copy.admin.createPackage}
-        </button>
+        <div className="admin-page-header__actions">
+          <button
+            type="button"
+            className="admin-button admin-button--primary"
+            onClick={openCreate}
+          >
+            {copy.admin.createPackage}
+          </button>
+        </div>
       </header>
 
       {error && !createOpen && editTarget === null ? (
@@ -309,145 +310,139 @@ export function AdminSkillsPage({
         </div>
       ) : null}
 
-      {/* Catalog filters: keyword, category, and the operator's role scope.
-          Every page in the AI-foundation console renders the same three
-          controls, and they all narrow the list endpoint rather than a loaded
-          page, so the four catalogs read consistently. */}
-      <div className="flex flex-wrap items-end gap-4">
-        <label className="grid max-w-xs gap-1 text-sm">
-          <span className={LABEL_TEXT_CLASS}>{copy.admin.filters.keywordLabel}</span>
-          <input
-            className={INPUT_CLASS}
-            value={keyword}
-            onChange={(event) => setKeyword(event.target.value)}
-            placeholder={copy.admin.filters.keywordPlaceholder}
-          />
-        </label>
-        <label className="grid gap-1 text-sm">
-          <span className={LABEL_TEXT_CLASS}>{copy.admin.filters.categoryLabel}</span>
-          <select
-            className="rounded-md border border-zinc-700 bg-zinc-800/60 px-3 py-2 text-sm text-zinc-100"
-            value={categoryCode}
-            onChange={(event) => setCategoryCode(event.target.value)}
-          >
-            <option value="">{copy.admin.filters.allCategories}</option>
-            {activeCategoryOptions(categories, categoryCode).map((category) => (
-              <option key={category.value} value={category.value}>
-                {category.label}
-              </option>
-            ))}
-          </select>
-        </label>
-        <div className="grid gap-1 text-sm">
-          <span className={LABEL_TEXT_CLASS}>{copy.admin.filters.roleScopeLabel}</span>
-          <div
-            className="inline-flex overflow-hidden rounded-md border border-zinc-700"
-            role="group"
-            aria-label={copy.admin.filters.roleScopeLabel}
-          >
-            {(['all', 'mine'] as const).map((scope) => {
-              const disabled = scope === 'mine' && usableRoleCodes.length === 0;
-              return (
-                <button
-                  key={scope}
-                  type="button"
-                  className={
-                    roleScope === scope
-                      ? 'bg-blue-600 px-3 py-2 text-xs font-medium text-white'
-                      : 'px-3 py-2 text-xs text-zinc-300 hover:bg-zinc-800 disabled:opacity-50'
-                  }
-                  aria-pressed={roleScope === scope}
-                  disabled={disabled}
-                  title={disabled ? copy.admin.filters.roleScopeUnavailable : undefined}
-                  onClick={() => setRoleScope(scope)}
-                >
-                  {scope === 'all'
-                    ? copy.admin.filters.roleScopeAll
-                    : copy.admin.filters.roleScopeMine}
-                </button>
-              );
-            })}
+      <div className="data-surface">
+        {/* Catalog filters: keyword, category, and the operator's role scope.
+            Every page in the AI-foundation console renders the same three
+            controls, and they all narrow the list endpoint rather than a loaded
+            page, so the four catalogs read consistently. */}
+        <div className="admin-list-toolbar">
+          <div className="admin-list-toolbar__filters">
+            <label className="admin-field admin-field--search">
+              <span className="admin-field__label">{copy.admin.filters.keywordLabel}</span>
+              <input
+                className="admin-control"
+                value={keyword}
+                onChange={(event) => setKeyword(event.target.value)}
+                placeholder={copy.admin.filters.keywordPlaceholder}
+              />
+            </label>
+            <label className="admin-field admin-field--compact">
+              <span className="admin-field__label">{copy.admin.filters.categoryLabel}</span>
+              <select
+                className="admin-control"
+                value={categoryCode}
+                onChange={(event) => setCategoryCode(event.target.value)}
+              >
+                <option value="">{copy.admin.filters.allCategories}</option>
+                {activeCategoryOptions(categories, categoryCode).map((category) => (
+                  <option key={category.value} value={category.value}>
+                    {category.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <div className="admin-field">
+              <span className="admin-field__label">{copy.admin.filters.roleScopeLabel}</span>
+              <div
+                className="admin-segmented"
+                role="group"
+                aria-label={copy.admin.filters.roleScopeLabel}
+              >
+                {(['all', 'mine'] as const).map((scope) => {
+                  const disabled = scope === 'mine' && usableRoleCodes.length === 0;
+                  return (
+                    <button
+                      key={scope}
+                      type="button"
+                      className="admin-segmented__item"
+                      aria-pressed={roleScope === scope}
+                      disabled={disabled}
+                      title={disabled ? copy.admin.filters.roleScopeUnavailable : undefined}
+                      onClick={() => setRoleScope(scope)}
+                    >
+                      {scope === 'all'
+                        ? copy.admin.filters.roleScopeAll
+                        : copy.admin.filters.roleScopeMine}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
           </div>
         </div>
-      </div>
 
-      <div className="overflow-hidden rounded-lg border border-zinc-800 bg-zinc-900/60">
-        {packages.length === 0 ? (
-          <div className="flex flex-col items-center gap-3 px-6 py-10 text-center">
-            <p className="text-sm text-zinc-400">{copy.admin.empty}</p>
-            <button
-              type="button"
-              className={PRIMARY_BUTTON_CLASS}
-              onClick={openCreate}
-            >
-              {copy.admin.createPackage}
-            </button>
-          </div>
-        ) : (
-          <table className="w-full text-left text-sm">
-            <thead className="bg-zinc-800/60 text-xs uppercase tracking-wide text-zinc-400">
-              <tr>
-                <th className="px-3 py-2.5 font-medium">{copy.admin.table.name}</th>
-                <th className="px-3 py-2.5 font-medium">{copy.admin.table.skillKey}</th>
-                <th className="px-3 py-2.5 font-medium">{copy.admin.table.categories}</th>
-                <th className="px-3 py-2.5 font-medium">{copy.admin.table.roles}</th>
-                <th className="px-3 py-2.5 font-medium">{copy.admin.table.actions}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {packages.map((item) => (
-                <tr
-                  key={item.id}
-                  className="border-t border-zinc-800 align-top hover:bg-zinc-800/40"
-                >
-                  <td className="px-3 py-2.5 font-medium text-zinc-100">{item.displayName}</td>
-                  <td className="px-3 py-2.5">
-                    <code className="font-mono text-xs text-zinc-300">{item.skillKey}</code>
-                  </td>
-                  <td className="max-w-52 px-3 py-2.5">
-                    {item.categories.length > 0 ? (
-                      <div className="flex flex-wrap gap-1">
-                        {item.categories.map((code) => (
-                          <span
-                            key={code}
-                            className="rounded-full bg-blue-500/15 px-2 py-0.5 text-xs font-medium text-blue-300"
-                          >
-                            {code}
-                          </span>
-                        ))}
-                      </div>
-                    ) : (
-                      <span className="text-zinc-500">{copy.admin.table.noValue}</span>
-                    )}
-                  </td>
-                  <td className="px-3 py-2.5 text-zinc-400">
-                    {item.allowedRoleCodes.length === 0
-                      ? copy.admin.table.allRoles
-                      : normalizeAllowedRoleCodes(item.allowedRoleCodes ?? []).join(', ')}
-                  </td>
-                  <td className="px-3 py-2.5">
-                    <div className="flex gap-2">
-                      <button
-                        type="button"
-                        className={SECONDARY_BUTTON_CLASS}
-                        onClick={() => setEditTarget(item)}
-                      >
-                        {copy.admin.table.edit}
-                      </button>
-                      <button
-                        type="button"
-                        className="rounded-md border border-red-900/60 bg-red-950/40 px-3 py-1.5 text-sm text-red-400 hover:bg-red-900/40"
-                        onClick={() => setDeleteTarget(item)}
-                      >
-                        {copy.admin.table.delete}
-                      </button>
-                    </div>
-                  </td>
+        <div className="table-frame">
+          {packages.length === 0 ? (
+            <div className="admin-list-state">
+              <p>{copy.admin.empty}</p>
+              <button
+                type="button"
+                className="admin-button admin-button--primary"
+                onClick={openCreate}
+              >
+                {copy.admin.createPackage}
+              </button>
+            </div>
+          ) : (
+            <table className="admin-list-table">
+              <thead>
+                <tr>
+                  <th>{copy.admin.table.name}</th>
+                  <th>{copy.admin.table.skillKey}</th>
+                  <th>{copy.admin.table.categories}</th>
+                  <th>{copy.admin.table.roles}</th>
+                  <th>{copy.admin.table.actions}</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
+              </thead>
+              <tbody>
+                {packages.map((item) => (
+                  <tr key={item.id} className="align-top">
+                    <td className="font-medium">{item.displayName}</td>
+                    <td>
+                      <code className="font-mono text-xs">{item.skillKey}</code>
+                    </td>
+                    <td className="max-w-52">
+                      {item.categories.length > 0 ? (
+                        <div className="flex flex-wrap gap-1">
+                          {item.categories.map((code) => (
+                            <span key={code} className="admin-badge admin-badge--info">
+                              {code}
+                            </span>
+                          ))}
+                        </div>
+                      ) : (
+                        <span>{copy.admin.table.noValue}</span>
+                      )}
+                    </td>
+                    <td>
+                      {item.allowedRoleCodes.length === 0
+                        ? copy.admin.table.allRoles
+                        : normalizeAllowedRoleCodes(item.allowedRoleCodes ?? []).join(', ')}
+                    </td>
+                    <td>
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          className="admin-button admin-button--secondary"
+                          onClick={() => setEditTarget(item)}
+                        >
+                          {copy.admin.table.edit}
+                        </button>
+                        <button
+                          type="button"
+                          className="admin-button admin-button--danger"
+                          onClick={() => setDeleteTarget(item)}
+                        >
+                          {copy.admin.table.delete}
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
       </div>
 
       <SurfaceDrawer

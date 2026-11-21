@@ -27,8 +27,6 @@ type CategoryType = (typeof CATEGORY_TYPES)[number];
 const INPUT_CLASS =
   'w-full rounded-md border border-zinc-700 bg-zinc-800/60 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-60';
 const LABEL_TEXT_CLASS = 'text-xs font-medium text-zinc-400';
-const PRIMARY_BUTTON_CLASS = 'rounded-md bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-500 disabled:opacity-60';
-const SECONDARY_BUTTON_CLASS = 'rounded-md border border-zinc-700 bg-zinc-800/60 px-3 py-1.5 text-sm text-zinc-200 hover:bg-zinc-700/60 disabled:opacity-60';
 
 /**
  * Permission code a market category grants.
@@ -235,126 +233,118 @@ export function SkillCategoriesPage() {
   }
 
   return (
-    <section className="flex flex-col gap-4 p-6">
-      <header className="flex flex-wrap items-center justify-between gap-3">
+    <section className="embedded-fill-page">
+      <header className="admin-page-header">
         <div>
-          <h2 className="text-lg font-semibold text-zinc-100">{copy.categories.title}</h2>
-          <p className="mt-0.5 max-w-2xl text-sm text-zinc-400">
-            {copy.categories.description}
-          </p>
+          <h2 className="admin-page-header__title">{copy.categories.title}</h2>
+          <p className="admin-page-header__description">{copy.categories.description}</p>
         </div>
-        <button type="button" className={PRIMARY_BUTTON_CLASS} onClick={openCreate}>
-          {copy.categories.create}
-        </button>
+        <div className="admin-page-header__actions">
+          <button type="button" className="admin-button admin-button--primary" onClick={openCreate}>
+            {copy.categories.create}
+          </button>
+        </div>
       </header>
 
       {error ? (
-        <div
-          role="alert"
-          className="rounded-md border border-red-800 bg-red-950/50 px-3 py-2 text-sm text-red-400"
-        >
+        <div role="alert" className="admin-alert admin-alert--error">
           {error}
         </div>
       ) : null}
 
-      <div
-        className="inline-flex w-fit gap-1 rounded-lg border border-zinc-800 bg-zinc-900/80 p-1"
-        role="tablist"
-        aria-label={copy.categories.taxonomyAria}
-      >
-        {CATEGORY_TYPES.map((type) => (
-          <button
-            key={type}
-            type="button"
-            role="tab"
-            aria-selected={activeType === type}
-            className={`rounded-md px-3 py-1.5 text-sm transition-colors ${
-              activeType === type
-                ? 'bg-blue-600 font-medium text-white'
-                : 'text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200'
-            }`}
-            onClick={() => setActiveType(type)}
-          >
-            {copy.categories.types[type]} ({counts[type]})
-          </button>
-        ))}
-      </div>
-
-      <div className="overflow-hidden rounded-lg border border-zinc-800 bg-zinc-900/60">
-        {visibleCategories.length === 0 ? (
-          <div className="flex flex-col items-center gap-3 px-6 py-10 text-center">
-            <h3 className="text-base font-semibold text-zinc-200">
-              {copy.categories.empty.title(copy.categories.types[activeType])}
-            </h3>
-            <p className="max-w-md text-sm text-zinc-400">{copy.categories.empty.description}</p>
-            <button type="button" className={PRIMARY_BUTTON_CLASS} onClick={openCreate}>
-              {copy.categories.empty.create}
-            </button>
+      <div className="data-surface">
+        <div className="admin-list-toolbar">
+          <div className="admin-list-toolbar__filters">
+            <div
+              className="admin-segmented"
+              role="group"
+              aria-label={copy.categories.taxonomyAria}
+            >
+              {CATEGORY_TYPES.map((type) => (
+                <button
+                  key={type}
+                  type="button"
+                  className="admin-segmented__item"
+                  aria-pressed={activeType === type}
+                  onClick={() => setActiveType(type)}
+                >
+                  {copy.categories.types[type]} ({counts[type]})
+                </button>
+              ))}
+            </div>
           </div>
-        ) : (
-          <table className="w-full text-left text-sm">
-            <thead className="bg-zinc-800/60 text-xs uppercase tracking-wide text-zinc-400">
-              <tr>
-                <th className="px-3 py-2.5 font-medium">{copy.categories.table.name}</th>
-                <th className="px-3 py-2.5 font-medium">{copy.categories.table.code}</th>
-                <th className="px-3 py-2.5 font-medium">{copy.categories.table.parent}</th>
-                <th className="px-3 py-2.5 font-medium">{copy.categories.table.permission}</th>
-                <th className="px-3 py-2.5 font-medium">{copy.categories.table.sort}</th>
-                <th className="px-3 py-2.5 font-medium">{copy.categories.table.state}</th>
-                <th className="px-3 py-2.5 font-medium">{copy.categories.table.actions}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {visibleCategories.map((item) => {
-                const parent = item.parentId
-                  ? categories.find((candidate) => candidate.id === item.parentId)
-                  : undefined;
-                return (
-                  <tr key={item.id} className="border-t border-zinc-800 hover:bg-zinc-800/40">
-                    <td className="px-3 py-2.5 font-medium text-zinc-100">{item.name}</td>
-                    <td className="px-3 py-2.5">
-                      <code className="font-mono text-xs text-zinc-300">{item.code}</code>
-                    </td>
-                    <td className="px-3 py-2.5 text-zinc-400">
-                      {parent ? parent.name : copy.categories.table.noValue}
-                    </td>
-                    <td className="px-3 py-2.5">
-                      {item.permissionCode ? (
-                        <code className="font-mono text-xs text-zinc-300">{item.permissionCode}</code>
-                      ) : (
-                        <span className="text-zinc-500">{copy.categories.table.noValue}</span>
-                      )}
-                    </td>
-                    <td className="px-3 py-2.5 text-zinc-400">{item.sortWeight}</td>
-                    <td className="px-3 py-2.5">
-                      {item.status === 1 ? (
-                        <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/15 px-2 py-0.5 text-xs font-medium text-emerald-400">
-                          <span className="size-1.5 rounded-full bg-emerald-400" />
-                          {copy.categories.table.enabled}
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1.5 rounded-full bg-zinc-700/60 px-2 py-0.5 text-xs font-medium text-zinc-400">
-                          <span className="size-1.5 rounded-full bg-zinc-500" />
-                          {copy.categories.table.disabled}
-                        </span>
-                      )}
-                      {!item.visible ? (
-                        <span className="ml-1.5 text-xs text-zinc-500">
-                          {copy.categories.table.hidden}
-                        </span>
-                      ) : null}
-                    </td>
-                    <td className="px-3 py-2.5">
-                      <button type="button" className={SECONDARY_BUTTON_CLASS} onClick={() => openEdit(item)}>
-                        {copy.categories.table.edit}
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        )}
+        </div>
+
+        <div className="table-frame">
+          {visibleCategories.length === 0 ? (
+            <div className="empty-state">
+              <h3>{copy.categories.empty.title(copy.categories.types[activeType])}</h3>
+              <p>{copy.categories.empty.description}</p>
+              <button type="button" className="admin-button admin-button--primary" onClick={openCreate}>
+                {copy.categories.empty.create}
+              </button>
+            </div>
+          ) : (
+            <table className="admin-list-table">
+              <thead>
+                <tr>
+                  <th>{copy.categories.table.name}</th>
+                  <th>{copy.categories.table.code}</th>
+                  <th>{copy.categories.table.parent}</th>
+                  <th>{copy.categories.table.permission}</th>
+                  <th>{copy.categories.table.sort}</th>
+                  <th>{copy.categories.table.state}</th>
+                  <th>{copy.categories.table.actions}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {visibleCategories.map((item) => {
+                  const parent = item.parentId
+                    ? categories.find((candidate) => candidate.id === item.parentId)
+                    : undefined;
+                  return (
+                    <tr key={item.id}>
+                      <td className="font-medium">{item.name}</td>
+                      <td>
+                        <code className="font-mono text-xs">{item.code}</code>
+                      </td>
+                      <td>{parent ? parent.name : copy.categories.table.noValue}</td>
+                      <td>
+                        {item.permissionCode ? (
+                          <code className="font-mono text-xs">{item.permissionCode}</code>
+                        ) : (
+                          <span>{copy.categories.table.noValue}</span>
+                        )}
+                      </td>
+                      <td>{item.sortWeight}</td>
+                      <td>
+                        {item.status === 1 ? (
+                          <span className="admin-badge admin-badge--success">
+                            {copy.categories.table.enabled}
+                          </span>
+                        ) : (
+                          <span className="admin-badge admin-badge--neutral">
+                            {copy.categories.table.disabled}
+                          </span>
+                        )}
+                        {!item.visible ? (
+                          <span className="ml-1.5 text-xs text-zinc-500">
+                            {copy.categories.table.hidden}
+                          </span>
+                        ) : null}
+                      </td>
+                      <td>
+                        <button type="button" className="admin-button admin-button--secondary" onClick={() => openEdit(item)}>
+                          {copy.categories.table.edit}
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          )}
+        </div>
       </div>
 
       <SurfaceDrawer

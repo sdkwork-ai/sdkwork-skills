@@ -73,15 +73,27 @@ export function PackageArtifactsPage() {
   }
 
   return (
-    <section className="skills-console-page">
+    <section className="embedded-fill-page">
       <header className="skills-console-header" style={{ marginBottom: 0 }}>
         <h2>{copy.artifacts.title(packageId)}</h2>
-        <button type="button" className="skills-console-primary" onClick={() => setCreateOpen(true)}>
-          {copy.artifacts.attach}
-        </button>
       </header>
-      {error ? <p role="alert">{error}</p> : null}
+      {error ? (
+        <div role="alert" className="admin-alert admin-alert--error">
+          {error}
+        </div>
+      ) : null}
       <div className="data-surface">
+        <div className="admin-list-toolbar">
+          <div className="admin-list-toolbar__actions">
+            <button
+              type="button"
+              className="admin-button admin-button--primary"
+              onClick={() => setCreateOpen(true)}
+            >
+              {copy.artifacts.attach}
+            </button>
+          </div>
+        </div>
         <div className="table-frame">
           {artifacts.length === 0 ? (
             <div className="empty-state">
@@ -91,7 +103,7 @@ export function PackageArtifactsPage() {
               </button>
             </div>
           ) : (
-            <table>
+            <table className="admin-list-table">
               <thead>
                 <tr>
                   <th>{copy.artifacts.table.version}</th>
